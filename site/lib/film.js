@@ -173,7 +173,8 @@ function shadeTriangle(buf, zb, P, A, look) {
   if (Math.abs(area) < 1e-9) return;
   const x0 = Math.max(0, Math.floor(Math.min(a[0], b[0], c[0]))), x1 = Math.min(buf.w - 1, Math.ceil(Math.max(a[0], b[0], c[0])));
   const y0 = Math.max(0, Math.floor(Math.min(a[1], b[1], c[1]))), y1 = Math.min(buf.h - 1, Math.ceil(Math.max(a[1], b[1], c[1])));
-  const { light, half, specular, contours, grain } = look;
+  const { light, half, specular, contours, grain, opacity, iridescence } = look;
+  const opaque = opacity >= 0.999;
   for (let y = y0; y <= y1; y++) {
     for (let x = x0; x <= x1; x++) {
       const px = x + 0.5, py = y + 0.5;
@@ -182,8 +183,9 @@ function shadeTriangle(buf, zb, P, A, look) {
       const w2 = 1 - w0 - w1;
       if (w0 < 0 || w1 < 0 || w2 < 0) continue;
       const z = w0 * a[2] + w1 * b[2] + w2 * c[2], k = y * buf.w + x;
-      if (z <= zb[k]) continue;
-      zb[k] = z;
+      // an opaque film hides what is behind it; a clear one is drawn back to front and blended
+      if (opaque && z <= zb[k]) continue;
+      if (z > zb[k]) zb[k] = z;
       const lerp = (key, i) => w0 * A[0][key][i] + w1 * A[1][key][i] + w2 * A[2][key][i];
       // the normal, turned to face the viewer (the film is seen from both sides)
       let nx = lerp("n", 0), ny = lerp("n", 1), nz = lerp("n", 2);
@@ -203,10 +205,21 @@ function shadeTriangle(buf, zb, P, A, look) {
         const line = Math.max(0, 1 - dist / 0.07) * (r > 0.04 && r < 0.985 ? 1 : 0);
         col = mix(col, INK, 0.45 * line);
       }
-      col = mix(col, PAPER, Math.min(1, spec + edgeGlow));
-      buf.rgb[k * 3] = col[0];
-      buf.rgb[k * 3 + 1] = col[1];
-      buf.rgb[k * 3 + 2] = col[2];
+      // the film's own colour, blended over what is behind it
+      let out = opaque ? col : [0, 1, 2].map((i) => buf.rgb[k * 3 + i] + (col[i] - buf.rgb[k * 3 + i]) * opacity);
+      // thin-film interference: colour that shifts with the film's thickness (slowly varying)
+      // and with the angle it is seen at, strongest where it turns edge-on
+      if (iridescence > 0) {
+        const thick = 0.55 + 0.45 * noise2(dx * 4 + 1.3, dy * 4 + 7.1);
+        const phase = (thick * 2.4) / (0.55 + 0.45 * nz);
+        const rainbow = [0, 0.33, 0.67].map((o, i) => PAPER[i] * 0.3 + 0.7 * 255 * (0.5 + 0.5 * Math.cos(2 * Math.PI * (phase + o))));
+        out = mix(out, rainbow, Math.min(0.85, iridescence * (0.18 + 0.55 * (1 - nz) ** 1.5 + 0.6 * spec)));
+      }
+      // light reflected off the surface: added on top, so a clear film still glints
+      out = mix(out, PAPER, Math.min(1, spec + edgeGlow));
+      buf.rgb[k * 3] = out[0];
+      buf.rgb[k * 3 + 1] = out[1];
+      buf.rgb[k * 3 + 2] = out[2];
     }
   }
 }
@@ -260,8 +273,14 @@ export function paintFilm(buf, points, loop, opts = {}) {
     specular: opts.specular ?? 0.55,          // highlight strength
     contours: opts.contours ?? 11,            // contour rings across the disc; 0 for none
     grain: opts.grain ?? 1,                   // grain fixed to the surface; 0 for none
+    opacity: Math.min(1, Math.max(0.05, opts.opacity ?? 1)),   // 1 opaque; lower is a clearer film
+    iridescence: opts.iridescence ?? 0,       // thin-film colours, as on a soap bubble
   };
-  for (const [a, b, d] of tris) shadeTriangle(buf, zb, [S[a], S[b], S[d]], [A[a], A[b], A[d]], look);
+  // a clear film is drawn far to near, so each layer blends over the ones behind it
+  const order = look.opacity < 0.999
+    ? tris.slice().sort((p, q) => (S[p[0]][2] + S[p[1]][2] + S[p[2]][2]) - (S[q[0]][2] + S[q[1]][2] + S[q[2]][2]))
+    : tris;
+  for (const [a, b, d] of order) shadeTriangle(buf, zb, [S[a], S[b], S[d]], [A[a], A[b], A[d]], look);
 
   // the wire: the loop itself in ink, faint where the film hides it
   const wire = Math.max(0.8, (base / 6.5) * 1.6 * k);
@@ -272,7 +291,8 @@ export function paintFilm(buf, points, loop, opts = {}) {
       const t = s / steps, x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t, z = a[2] + (b[2] - a[2]) * t;
       const px = Math.round(x), py = Math.round(y);
       const hidden = px >= 0 && py >= 0 && px < buf.w && py < buf.h && zb[py * buf.w + px] > z + 0.02;
-      inkDot(buf, x, y, wire * (hidden ? 0.6 : 1), hidden ? 0.25 : 0.95);
+      // behind the film the wire shows through as much as the film is clear
+      inkDot(buf, x, y, wire * (hidden ? 0.6 : 1), hidden ? Math.max(0.2, 0.95 * (1 - 0.8 * look.opacity)) : 0.95);
     }
   }
 }

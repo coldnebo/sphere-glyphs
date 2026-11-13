@@ -90,6 +90,19 @@
       </label>
     </section>
 
+    <section class="controls film-controls" aria-label="Soap film" hidden>
+      <label class="group" title="1: an opaque film. Lower: a clearer film, like a soap bubble, with the far side showing through">
+        <span class="label">opacity</span>
+        <input id="film-opacity" type="range" min="0.05" max="1" step="0.05">
+        <output id="film-opacityval"></output>
+      </label>
+      <label class="group" title="Thin-film colours, as on a soap bubble: they shift with the film's thickness and the angle it's seen at">
+        <span class="label">iridescence</span>
+        <input id="film-iridescence" type="range" min="0" max="1" step="0.05">
+        <output id="film-iridescenceval"></output>
+      </label>
+    </section>
+
     <section class="controls brush" aria-label="Brush">
       <label class="group" title="Overall line weight">
         <span class="label">weight</span>

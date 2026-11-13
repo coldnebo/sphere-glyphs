@@ -32,7 +32,8 @@ const FAMILY = familyNames(data.loops, data.symmetries);   // canonical code -> 
 // The glyph on screen is star(root, k). `family` names the root when it's A, B or C.
 // `style` is "glass" (Penrose) or a brush preset; `ink` holds the brush's own settings.
 const INK_DEFAULT = { ink: 1, dryness: 1, splatter: 1, grit: 0 };
-const state = { root: data.loops.A, family: "A", k: 1, ...BRUSH, style: "glass", ink: { ...INK_DEFAULT } };
+const FILM_DEFAULT = { opacity: 0.45, iridescence: 0.5 };
+const state = { root: data.loops.A, family: "A", k: 1, ...BRUSH, style: "glass", ink: { ...INK_DEFAULT }, film: { ...FILM_DEFAULT } };
 const isBrush = () => !["glass", "cloud", "film"].includes(state.style);
 const isPainted = () => state.style !== "glass";       // brush, cloud or film: drawn on a canvas
 const cycle = () => star(state.root, state.k);
@@ -120,10 +121,15 @@ function buildLoop() {
 // The soap film, shown in the 3D view when the film style is chosen: translucent, so the loop
 // and the sphere stay visible through it, and glossy, so highlights slide over it as it turns and
 // show how it curves. The shaded render comes on release, as for every style.
-const filmMat = new THREE.MeshPhongMaterial({
-  color: 0xb89a74, specular: 0x8a8070, shininess: 55,
-  transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false,
+const filmMat = new THREE.MeshPhysicalMaterial({
+  color: 0xc8b090, roughness: 0.18, metalness: 0, clearcoat: 0.6, clearcoatRoughness: 0.15,
+  iridescence: FILM_DEFAULT.iridescence, iridescenceIOR: 1.33, iridescenceThicknessRange: [180, 520],
+  transparent: true, opacity: FILM_DEFAULT.opacity, side: THREE.DoubleSide, depthWrite: false,
 });
+function syncFilmMaterial() {
+  filmMat.opacity = state.film.opacity;
+  filmMat.iridescence = state.film.iridescence;
+}
 scene.add(new THREE.AmbientLight(0xffffff, 1.6));
 const filmLight = new THREE.DirectionalLight(0xffffff, 1.4);
 scene.add(filmLight);
@@ -140,6 +146,7 @@ function buildFilm() {
   geo.setAttribute("position", new THREE.BufferAttribute(Float32Array.from(pos), 3));
   geo.setIndex(tris.flat());
   geo.computeVertexNormals();
+  syncFilmMaterial();
   filmMesh3d = new THREE.Mesh(geo, filmMat);
   scene.add(filmMesh3d);
 }
@@ -192,7 +199,7 @@ function brushCanvas(px, c = cycle(), q = camera.quaternion, settings = state, s
   const buf = { w: px, h: px, rgb: new Float32Array(px * px * 3) };
   const shape = { size: px, view: viewRows(q), base: settings.base, momentum: settings.momentum, pressure: settings.pressure };
   if (style === "cloud") paintCloud(buf, data.points, c, shape);
-  else if (style === "film") paintFilm(buf, data.points, c, shape);
+  else if (style === "film") paintFilm(buf, data.points, c, { ...shape, ...(settings.film ?? FILM_DEFAULT) });
   else paintGlyph(buf, data.points, c, { ...shape, ...settings.ink });
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = px;
@@ -247,7 +254,7 @@ function thumbnail(el, c, quaternion = DEFAULT_VIEW, brush = BRUSH, look = { sty
   thumbQueue.push(async () => {
     if (look.style !== "glass") {
       const px = Math.round(el.clientWidth * Math.min(2, devicePixelRatio || 1)) || 240;
-      el.replaceChildren(brushCanvas(px, c, quaternion, { ...brush, ink: look.ink ?? INK_DEFAULT }, look.style));
+      el.replaceChildren(brushCanvas(px, c, quaternion, { ...brush, ink: look.ink ?? INK_DEFAULT, film: look.film }, look.style));
       return;
     }
     const style = withBrush(withView(glassStyle, viewMatrix(quaternion).elements), brush);
@@ -278,6 +285,7 @@ function stateParams() {
     brush: [state.base, state.momentum, state.pressure].map((v) => +v.toFixed(2)).join(","),
   };
   if (isPainted()) params.style = state.style;
+  if (state.style === "film") params.film = [state.film.opacity, state.film.iridescence].map((v) => +v.toFixed(2)).join(",");
   if (isBrush()) {
     params.ink = [state.ink.ink, state.ink.dryness, state.ink.splatter, state.ink.grit].map((v) => +v.toFixed(2)).join(",");
   }
@@ -292,7 +300,11 @@ function saveToURL() {
 }
 
 /** Apply a {loop, view, brush, style, ink} description (from the URL or a gallery entry). */
-function applyCode({ loop, view, brush, style, ink: inkParam }) {
+function applyCode({ loop, view, brush, style, ink: inkParam, film: filmParam }) {
+  const fv = (filmParam ?? "").split(",").map(Number);
+  state.film = fv.length === 2 && fv.every(Number.isFinite)
+    ? { opacity: clamp(fv[0], 0.05, 1), iridescence: clamp(fv[1], 0, 1) }
+    : { ...FILM_DEFAULT };
   state.style = style && (style in STYLE_NAMES || style === "custom") ? style : "glass";
   const v = (inkParam ?? "").split(",").map(Number);
   state.ink = v.length === 4 && v.every(Number.isFinite)
@@ -326,6 +338,7 @@ const kInput = document.getElementById("k");
 const kOut = document.getElementById("kval");
 const SLIDERS = [["base", 1], ["momentum", 2], ["pressure", 2]];
 
+const FILM_SLIDERS = [["film-opacity", "opacity"], ["film-iridescence", "iridescence"]];
 const INK_SLIDERS = [["ink-amount", "ink", 2], ["dryness", "dryness", 1], ["splatter", "splatter", 1], ["grit", "grit", 2]];
 
 function syncControls() {
@@ -340,6 +353,11 @@ function syncControls() {
     document.getElementById(id + "val").textContent = state.ink[key].toFixed(digits);
   }
   document.querySelector(".ink-controls").hidden = !isBrush();
+  document.querySelector(".film-controls").hidden = state.style !== "film";
+  for (const [id, key] of FILM_SLIDERS) {
+    document.getElementById(id).value = state.film[key];
+    document.getElementById(id + "val").textContent = state.film[key].toFixed(2);
+  }
   for (const b of document.querySelectorAll("[data-style]")) {
     b.setAttribute("aria-pressed", String(b.dataset.style === state.style));
   }
@@ -400,6 +418,16 @@ for (const [id, key, digits] of INK_SLIDERS) {
       state.style = "custom";
       syncControls();
     }
+    inkNow();
+  });
+}
+
+for (const [id, key] of FILM_SLIDERS) {
+  const input = document.getElementById(id);
+  input.addEventListener("input", () => {
+    state.film[key] = Number(input.value);
+    document.getElementById(id + "val").textContent = state.film[key].toFixed(2);
+    syncFilmMaterial();
     inkNow();
   });
 }
@@ -509,9 +537,13 @@ for (const r of Object.keys(data.loops)) {
 }
 
 /** A gallery entry's style and brush ink, if it was saved with a brush. */
-function entryLook({ style, ink: inkParam }) {
+function entryLook({ style, ink: inkParam, film: filmParam }) {
   if (!style || style === "glass") return { style: "glass" };
-  if (style === "cloud" || style === "film") return { style };
+  if (style === "cloud") return { style };
+  if (style === "film") {
+    const fv = (filmParam ?? "").split(",").map(Number);
+    return { style, film: fv.length === 2 && fv.every(Number.isFinite) ? { opacity: fv[0], iridescence: fv[1] } : FILM_DEFAULT };
+  }
   const v = (inkParam ?? "").split(",").map(Number);
   const ink = v.length === 4 && v.every(Number.isFinite)
     ? { ink: v[0], dryness: v[1], splatter: v[2], grit: v[3] }
