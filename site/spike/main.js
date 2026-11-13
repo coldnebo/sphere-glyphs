@@ -8,6 +8,7 @@ import {
   loopSubstance, withBrush, withView,
   star, encodeLoop, decodeLoop, canonicalCode, familyNames, randomLoop, mutateLoop,
 } from "../lib/glyph-text.js";
+import { BRUSHES, paintGlyph } from "../lib/brush.js";
 
 const PAPER = 0xf5f0e3;
 const INK = 0x17140f;
@@ -27,7 +28,10 @@ const N = P.length;
 const FAMILY = familyNames(data.loops, data.symmetries);   // canonical code -> "A1".."C6"
 
 // The glyph on screen is star(root, k). `family` names the root when it's A, B or C.
-const state = { root: data.loops.A, family: "A", k: 1, ...BRUSH };
+// `style` is "glass" (Penrose) or a brush preset; `ink` holds the brush's own settings.
+const INK_DEFAULT = { ink: 1, dryness: 1, splatter: 1, grit: 0 };
+const state = { root: data.loops.A, family: "A", k: 1, ...BRUSH, style: "glass", ink: { ...INK_DEFAULT } };
+const isBrush = () => state.style !== "glass";
 const cycle = () => star(state.root, state.k);
 
 /** Short name for what's on screen: "B4" for a family glyph, else its 12-character code. */
@@ -144,15 +148,48 @@ const ink = document.getElementById("ink");
 const status = document.getElementById("status");
 let pending = false, running = false;
 
+/** The camera's world-to-view rotation as rows, the form brush.js takes. */
+function viewRows(q) {
+  const e = viewMatrix(q).elements;
+  return [[e[0], e[4], e[8]], [e[1], e[5], e[9]], [e[2], e[6], e[10]]];
+}
+
+/** Paint the current glyph with the brush into a new canvas of `px` pixels. */
+function brushCanvas(px, c = cycle(), q = camera.quaternion, settings = state) {
+  const buf = { w: px, h: px, rgb: new Float32Array(px * px * 3) };
+  paintGlyph(buf, data.points, c, {
+    size: px, view: viewRows(q),
+    base: settings.base, momentum: settings.momentum, pressure: settings.pressure, ...settings.ink,
+  });
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = px;
+  const ctx = canvas.getContext("2d");
+  const img = ctx.createImageData(px, px);
+  for (let i = 0, j = 0; i < buf.rgb.length; i += 3, j += 4) {
+    img.data[j] = buf.rgb[i];
+    img.data[j + 1] = buf.rgb[i + 1];
+    img.data[j + 2] = buf.rgb[i + 2];
+    img.data[j + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  return canvas;
+}
+
 async function inkNow() {
   if (running) return void (pending = true);
   running = true;
   ink.classList.add("busy");
   const t0 = performance.now();
   try {
-    const style = withBrush(withView(glassStyle, viewMatrix(camera.quaternion).elements), state);
-    ink.replaceChildren(await penroseSVG(cycle(), style));
-    status.textContent = `ink, Penrose · ${Math.round(performance.now() - t0)} ms`;
+    if (isBrush()) {
+      const px = Math.round(ink.clientWidth * Math.min(2, devicePixelRatio || 1));
+      ink.replaceChildren(brushCanvas(px));
+      status.textContent = `ink, brush (${STYLE_NAMES[state.style] ?? "custom"}) · ${Math.round(performance.now() - t0)} ms`;
+    } else {
+      const style = withBrush(withView(glassStyle, viewMatrix(camera.quaternion).elements), state);
+      ink.replaceChildren(await penroseSVG(cycle(), style));
+      status.textContent = `ink, Penrose · ${Math.round(performance.now() - t0)} ms`;
+    }
     saveToURL();
   } catch (e) {
     status.textContent = "Penrose error, see console";
@@ -172,8 +209,13 @@ controls.addEventListener("end", inkNow);
 // Small renders for the family table and gallery, one at a time so the page stays responsive.
 const thumbQueue = [];
 let thumbsRunning = false;
-function thumbnail(el, c, quaternion = DEFAULT_VIEW, brush = BRUSH) {
+function thumbnail(el, c, quaternion = DEFAULT_VIEW, brush = BRUSH, look = { style: "glass" }) {
   thumbQueue.push(async () => {
+    if (look.style !== "glass") {
+      const px = Math.round(el.clientWidth * Math.min(2, devicePixelRatio || 1)) || 240;
+      el.replaceChildren(brushCanvas(px, c, quaternion, { ...brush, ink: look.ink ?? INK_DEFAULT }));
+      return;
+    }
     const style = withBrush(withView(glassStyle, viewMatrix(quaternion).elements), brush);
     el.replaceChildren(await penroseSVG(c, style));
   });
@@ -190,23 +232,38 @@ async function drainThumbs() {
 
 // ---------------------------------------------------------------- URL state
 //   ?loop=B4 | ?loop=3192a56c487b   &view=qx,qy,qz,qw   &brush=weight,momentum,pressure
+//   &style=glass|wet|fluent|dry|big|formal|custom   &ink=ink,dryness,splatter,grit (brush styles)
 
-function stateURL() {
+const STYLE_NAMES = { glass: "glass", wet: "wet", fluent: "fluent", dry: "dry", big: "big brush", formal: "formal" };
+
+function stateParams() {
   const q = camera.quaternion;
-  const params = new URLSearchParams({
+  const params = {
     loop: loopName(),
     view: [q.x, q.y, q.z, q.w].map((v) => +v.toFixed(4)).join(","),
     brush: [state.base, state.momentum, state.pressure].map((v) => +v.toFixed(2)).join(","),
-  });
-  return `${location.origin}${location.pathname}?${params}`;
+  };
+  if (isBrush()) {
+    params.style = state.style;
+    params.ink = [state.ink.ink, state.ink.dryness, state.ink.splatter, state.ink.grit].map((v) => +v.toFixed(2)).join(",");
+  }
+  return params;
+}
+function stateURL() {
+  return `${location.origin}${location.pathname}?${new URLSearchParams(stateParams())}`;
 }
 function saveToURL() {
   history.replaceState(null, "", stateURL());
   showLoopInfo();
 }
 
-/** Apply a {loop, view, brush} description (from the URL or a gallery entry). */
-function applyCode({ loop, view, brush }) {
+/** Apply a {loop, view, brush, style, ink} description (from the URL or a gallery entry). */
+function applyCode({ loop, view, brush, style, ink: inkParam }) {
+  state.style = style && (style in STYLE_NAMES || style === "custom") ? style : "glass";
+  const v = (inkParam ?? "").split(",").map(Number);
+  state.ink = v.length === 4 && v.every(Number.isFinite)
+    ? { ink: clamp(v[0], 0.4, 2), dryness: clamp(v[1], 0, 3), splatter: clamp(v[2], 0, 3), grit: clamp(v[3], 0, 1) }
+    : { ...INK_DEFAULT, ...pick(BRUSHES[state.style] ?? {}, INK_KEYS) };
   const fam = /^([ABC])([1-6])$/.exec(loop ?? "");
   if (fam) Object.assign(state, { root: data.loops[fam[1]], family: fam[1], k: Number(fam[2]) });
   else if (decodeLoop(loop)) Object.assign(state, { root: decodeLoop(loop), family: null, k: 1 });
@@ -226,6 +283,8 @@ function applyCode({ loop, view, brush }) {
   inkNow();
 }
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const INK_KEYS = ["ink", "dryness", "splatter", "grit"];
+const pick = (o, keys) => Object.fromEntries(keys.filter((k) => k in o).map((k) => [k, o[k]]));
 
 // ---------------------------------------------------------------- controls
 
@@ -233,12 +292,22 @@ const kInput = document.getElementById("k");
 const kOut = document.getElementById("kval");
 const SLIDERS = [["base", 1], ["momentum", 2], ["pressure", 2]];
 
+const INK_SLIDERS = [["ink-amount", "ink", 2], ["dryness", "dryness", 1], ["splatter", "splatter", 1], ["grit", "grit", 2]];
+
 function syncControls() {
   kInput.value = state.k;
   kOut.textContent = state.k;
   for (const [key, digits] of SLIDERS) {
     document.getElementById(key).value = state[key];
     document.getElementById(key + "val").textContent = state[key].toFixed(digits);
+  }
+  for (const [id, key, digits] of INK_SLIDERS) {
+    document.getElementById(id).value = state.ink[key];
+    document.getElementById(id + "val").textContent = state.ink[key].toFixed(digits);
+  }
+  document.querySelector(".ink-controls").hidden = !isBrush();
+  for (const b of document.querySelectorAll("[data-style]")) {
+    b.setAttribute("aria-pressed", String(b.dataset.style === state.style));
   }
   for (const b of document.querySelectorAll("#families button")) {
     b.setAttribute("aria-pressed", String(b.dataset.name === `${state.family}${state.k}`));
@@ -273,6 +342,90 @@ for (const [key, digits] of SLIDERS) {
   });
 }
 
+// styles: glass, or a brush preset (which sets the whole brush, weight and momentum included)
+for (const b of document.querySelectorAll("[data-style]")) {
+  b.addEventListener("click", () => {
+    const name = b.dataset.style;
+    state.style = name;
+    if (name !== "glass") {
+      const preset = BRUSHES[name];
+      state.ink = { ...INK_DEFAULT, ...pick(preset, INK_KEYS) };
+      Object.assign(state, BRUSH, pick(preset, ["base", "momentum", "pressure"]));
+    }
+    syncControls();
+    buildLoop();
+    inkNow();
+  });
+}
+for (const [id, key, digits] of INK_SLIDERS) {
+  const input = document.getElementById(id);
+  input.addEventListener("input", () => {
+    state.ink[key] = Number(input.value);
+    document.getElementById(id + "val").textContent = state.ink[key].toFixed(digits);
+    if (state.style !== "custom") {
+      state.style = "custom";
+      syncControls();
+    }
+    inkNow();
+  });
+}
+
+// ---------------------------------------------------------------- save a high-quality image
+
+const SAVE_PX = 2400;
+const SITE = "coldnebo.github.io/sphere-glyphs";
+
+/** The credit line along the bottom: what this is, and where it came from. */
+function attribution(ctx, px) {
+  const name = loopName();
+  const style = isBrush() ? `brush, ${STYLE_NAMES[state.style] ?? "custom"}` : "glass";
+  ctx.font = `italic ${Math.round(px * 0.0115)}px "EB Garamond", Georgia, serif`;
+  ctx.fillStyle = "rgba(70, 62, 52, 0.55)";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText(`Sphere Glyphs · loop ${name} · ${style} · ${SITE}`, px / 2, px * 0.975);
+}
+
+async function saveImage(button) {
+  const was = button.textContent;
+  button.textContent = "rendering…";
+  button.disabled = true;
+  await new Promise((r) => setTimeout(r, 30));   // let the label update before the work
+  try {
+    let canvas;
+    if (isBrush()) {
+      canvas = brushCanvas(SAVE_PX);
+    } else {
+      const style = withBrush(withView(glassStyle, viewMatrix(camera.quaternion).elements), state);
+      const svg = await penroseSVG(cycle(), style);
+      svg.setAttribute("width", SAVE_PX);
+      svg.setAttribute("height", SAVE_PX);
+      const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml" }));
+      const img = new Image();
+      img.src = url;
+      await img.decode();
+      canvas = document.createElement("canvas");
+      canvas.width = canvas.height = SAVE_PX;
+      canvas.getContext("2d").drawImage(img, 0, 0, SAVE_PX, SAVE_PX);
+      URL.revokeObjectURL(url);
+    }
+    attribution(canvas.getContext("2d"), SAVE_PX);
+    const blob = await new Promise((r) => canvas.toBlob(r, "image/png"));
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `sphere-glyph-${loopName()}-${isBrush() ? state.style : "glass"}.png`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  } catch (e) {
+    console.error(e);
+    status.textContent = "could not save the image, see console";
+  } finally {
+    button.textContent = was;
+    button.disabled = false;
+  }
+}
+document.getElementById("save").addEventListener("click", (e) => saveImage(e.currentTarget));
+
 document.getElementById("random").addEventListener("click", () => {
   Object.assign(state, { root: randomLoop(N), family: null, k: 1 });
   syncControls();
@@ -302,8 +455,7 @@ async function copy(text, button) {
 }
 document.getElementById("copylink").addEventListener("click", (e) => copy(stateURL(), e.currentTarget));
 document.getElementById("copyentry").addEventListener("click", (e) => {
-  const p = new URL(stateURL()).searchParams;
-  const entry = { title: "untitled", loop: p.get("loop"), view: p.get("view"), brush: p.get("brush"), note: "" };
+  const entry = { title: "untitled", ...stateParams(), note: "" };
   copy(JSON.stringify(entry, null, 2) + ",", e.currentTarget);
 });
 
@@ -320,6 +472,16 @@ for (const r of Object.keys(data.loops)) {
     families.append(b);
     thumbnail(b.querySelector(".art"), star(data.loops[r], k));
   }
+}
+
+/** A gallery entry's style and brush ink, if it was saved with a brush. */
+function entryLook({ style, ink: inkParam }) {
+  if (!style || style === "glass") return { style: "glass" };
+  const v = (inkParam ?? "").split(",").map(Number);
+  const ink = v.length === 4 && v.every(Number.isFinite)
+    ? { ink: v[0], dryness: v[1], splatter: v[2], grit: v[3] }
+    : { ...INK_DEFAULT, ...pick(BRUSHES[style] ?? {}, INK_KEYS) };
+  return { style, ink };
 }
 
 // the curated gallery (site/spike/gallery.json)
@@ -341,6 +503,7 @@ for (const entry of gallery) {
       b.querySelector(".art"), c,
       q.length === 4 ? new THREE.Quaternion(...q).normalize() : DEFAULT_VIEW,
       b3.length === 3 ? { base: b3[0], momentum: b3[1], pressure: b3[2] } : BRUSH,
+      entryLook(entry),
     );
   }
 }

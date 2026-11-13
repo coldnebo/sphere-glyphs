@@ -19,7 +19,7 @@
   <main>
     <header>
       <h1>A glyph is a view of a loop</h1>
-      <p>Drag the sphere to turn the loop. Let go, and Penrose inks the glyph from that viewpoint.</p>
+      <p>Drag the sphere to turn the loop. Let go, and the glyph is inked from that viewpoint, in glass by Penrose or with a calligrapher's brush.</p>
     </header>
 
     <section class="panels">
@@ -50,6 +50,42 @@
       <button id="reset">reset view</button>
       <button id="copylink" title="The address bar always holds the loop, view and brush">copy link</button>
       <button id="copyentry" title="A gallery.json entry for this glyph">copy gallery entry</button>
+    </section>
+
+    <section class="controls styles" aria-label="Style">
+      <div class="group" role="radiogroup" aria-label="Ink style">
+        <span class="label">style</span>
+        <button data-style="glass" title="Penrose: a transparent sphere, the back seen through in a pale wash">glass</button>
+        <button data-style="wet" title="A loaded brush: full, pooled strokes">wet</button>
+        <button data-style="fluent" title="A brush at an even pace">fluent</button>
+        <button data-style="dry" title="A dry, fast brush: flying white and splatter">dry</button>
+        <button data-style="big" title="A big, coarse brush dragged over rough paper">big brush</button>
+        <button data-style="formal" title="Slow and even, almost seal script">formal</button>
+      </div>
+      <button id="save" title="A 2400-pixel PNG of this glyph, from this view, in this style">save image</button>
+    </section>
+
+    <section class="controls ink-controls" aria-label="Brush ink" hidden>
+      <label class="group" title="How much ink the brush carries">
+        <span class="label">ink</span>
+        <input id="ink-amount" type="range" min="0.4" max="2" step="0.05">
+        <output id="ink-amountval"></output>
+      </label>
+      <label class="group" title="How readily the brush breaks into flying white on fast strokes">
+        <span class="label">dryness</span>
+        <input id="dryness" type="range" min="0" max="3" step="0.1">
+        <output id="drynessval"></output>
+      </label>
+      <label class="group" title="How freely the brush throws droplets when it slows suddenly">
+        <span class="label">splatter</span>
+        <input id="splatter" type="range" min="0" max="3" step="0.1">
+        <output id="splatterval"></output>
+      </label>
+      <label class="group" title="0: a fine brush. 1: a big, coarse brush whose dry ink catches the paper's grain">
+        <span class="label">grit</span>
+        <input id="grit" type="range" min="0" max="1" step="0.05">
+        <output id="gritval"></output>
+      </label>
     </section>
 
     <section class="controls brush" aria-label="Brush">
