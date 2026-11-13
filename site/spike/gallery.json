@@ -14,17 +14,37 @@
     "note": "Heavy weight and pressure. (Starter entry.)"
   },
   {
-    "title": "A6, from the pole",
-    "loop": "A6",
-    "view": "0,0,0,1",
-    "brush": "6.5,1,1",
-    "note": "Looking straight down the symmetry axis. (Starter entry.)"
-  },
-  {
     "title": "a wanderer",
     "loop": "72b491c53a68",
     "view": "-0.2571,0,0,0.9664",
     "brush": "6.5,0.6,1",
     "note": "One of the ~30 million loops outside the families. (Starter entry.)"
+  },
+  {
+    "title": "crossed legs",
+    "loop": "89a467512c3b",
+    "view": "0.1037,-0.8317,-0.137,0.5279",
+    "brush": "14,1,1.4",
+    "style": "big",
+    "ink": "0.8,1.8,2.6,1",
+    "note": "a sitting meditation"
+  },
+  {
+    "title": "and and",
+    "loop": "4b237a58c916",
+    "view": "0.2785,-0.6818,0.3103,0.6011",
+    "brush": "6.5,1,1",
+    "style": "fluent",
+    "ink": "1,1,1,0",
+    "note": "double ampersand"
+  },
+  {
+    "title": "soapy signature",
+    "loop": "6751942c8b3a",
+    "view": "-0.0069,-0.2355,0.2655,0.9349",
+    "brush": "6.5,1,0.3",
+    "style": "film",
+    "film": "0.45,0.5",
+    "note": "a minimal spanning soap film that almost looks like a signature"
   }
 ]
