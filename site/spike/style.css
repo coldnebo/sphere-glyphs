@@ -60,3 +60,16 @@ button[aria-pressed="true"] { border-color: var(--ink); background: color-mix(in
 input[type="range"] { accent-color: var(--accent); width: 160px; }
 output { min-width: 3ch; font-variant-numeric: tabular-nums; }
 .controls.brush { margin-top: 12px; }
+
+h2 { font-weight: normal; font-size: 1.3rem; margin: 36px 0 4px; }
+.codebar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-top: 18px; }
+.codebar code { font: 1.05rem/1 "DejaVu Sans Mono", Menlo, Consolas, monospace; letter-spacing: 0.04em; }
+
+.thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; margin-top: 14px; }
+.thumbs.families { grid-template-columns: repeat(6, 1fr); }
+@media (max-width: 640px) { .thumbs.families { grid-template-columns: repeat(3, 1fr); } }
+.thumb { padding: 4px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.thumb .art { width: 100%; aspect-ratio: 1; background: #f5f0e3; border-radius: 3px; }
+.thumb .art svg { display: block; width: 100%; height: 100%; }
+.thumb span { font-size: 0.8rem; color: var(--muted); }
+.thumb[aria-pressed="true"] span { color: var(--ink); }

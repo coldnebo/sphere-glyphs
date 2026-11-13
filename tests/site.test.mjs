@@ -6,7 +6,10 @@ import { readFileSync, writeFileSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { renderSVG } from "../src/penrose.mjs";
-import { literals, loopSubstance, withBrush, withView } from "../site/spike/glyph-text.js";
+import {
+  literals, loopSubstance, withBrush, withView,
+  star, normalizeLoop, encodeLoop, decodeLoop, canonicalCode, familyNames, randomLoop, mutateLoop,
+} from "../site/spike/glyph-text.js";
 
 const data = JSON.parse(readFileSync("site/spike/data.json", "utf8"));
 const glass = readFileSync("penrose/styles/glass.style", "utf8");
@@ -69,4 +72,54 @@ test("withBrush sets the brush block, and the result renders", async () => {
   writeFileSync(sty, withBrush(withView(glass, rot(0.4, 0.9)), { base: 3, momentum: 0.1, pressure: 0 }));
   const svg = await renderSVG({ domain: "penrose/tammes-glyph.domain", substance: sub, style: sty });
   assert.ok((svg.match(/<path\b/g) ?? []).length >= 13);
+});
+
+// ---------------------------------------------------------------- loop codes
+
+test("loop codes are unique per loop, whatever the start and direction", () => {
+  const L = data.loops.A;
+  const code = encodeLoop(L);
+  assert.match(code, /^[0-9a-c]{12}$/);
+  const rotated = [...L.slice(5), ...L.slice(0, 5)];
+  assert.equal(encodeLoop(rotated), code);
+  assert.equal(encodeLoop([...L].reverse()), code);
+  assert.deepEqual(normalizeLoop(decodeLoop(code)), normalizeLoop(L));
+  assert.equal(decodeLoop("0123"), null);
+  assert.equal(decodeLoop("112345678abc"), null);   // repeats a point
+});
+
+test("the 18 family glyphs have 18 distinct canonical codes, independent of symmetry", () => {
+  const names = familyNames(data.loops, data.symmetries);
+  assert.equal(names.size, 18);
+  const B4 = star(data.loops.B, 4);
+  for (const s of data.symmetries) {
+    assert.equal(names.get(canonicalCode(B4.map((v) => s[v]), data.symmetries)), "B4");
+  }
+});
+
+test("random loops are permutations; mutation changes exactly two chords", () => {
+  let seed = 7;
+  const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const chords = (c) => new Set(c.map((v, i) => [v, c[(i + 1) % c.length]].sort((a, b) => a - b).join("-")));
+  for (let t = 0; t < 200; t++) {
+    const c = randomLoop(13, rand);
+    assert.deepEqual([...c].sort((a, b) => a - b), [...Array(13).keys()]);
+    const m = mutateLoop(c, rand);
+    const before = chords(c), after = chords(m);
+    assert.equal([...before].filter((e) => !after.has(e)).length, 2);
+  }
+});
+
+test("every gallery entry is a valid loop, view and brush", () => {
+  const gallery = JSON.parse(readFileSync("site/spike/gallery.json", "utf8"));
+  assert.ok(Array.isArray(gallery));
+  for (const e of gallery) {
+    assert.ok(e.title, "title");
+    assert.ok(/^[ABC][1-6]$/.test(e.loop) || decodeLoop(e.loop), `${e.title}: loop ${e.loop}`);
+    const q = e.view.split(",").map(Number);
+    assert.equal(q.length, 4, `${e.title}: view`);
+    assert.ok(Math.abs(Math.hypot(...q) - 1) < 0.01, `${e.title}: view is a unit quaternion`);
+    const b = e.brush.split(",").map(Number);
+    assert.ok(b.length === 3 && b.every(Number.isFinite), `${e.title}: brush`);
+  }
 });

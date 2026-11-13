@@ -1,0 +1,30 @@
+[
+  {
+    "title": "B2, seal",
+    "loop": "B2",
+    "view": "-0.2571,0,0,0.9664",
+    "brush": "5,0.15,0.6",
+    "note": "Low momentum turns the cursive loop into something closer to seal script. (Starter entry: replace freely.)"
+  },
+  {
+    "title": "C4, heavy",
+    "loop": "C4",
+    "view": "-0.2571,0,0,0.9664",
+    "brush": "11,1,2.2",
+    "note": "Heavy weight and pressure. (Starter entry.)"
+  },
+  {
+    "title": "A6, from the pole",
+    "loop": "A6",
+    "view": "0,0,0,1",
+    "brush": "6.5,1,1",
+    "note": "Looking straight down the symmetry axis. (Starter entry.)"
+  },
+  {
+    "title": "a wanderer",
+    "loop": "72b491c53a68",
+    "view": "-0.2571,0,0,0.9664",
+    "brush": "6.5,0.6,1",
+    "note": "One of the ~30 million loops outside the families. (Starter entry.)"
+  }
+]

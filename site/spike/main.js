@@ -1,29 +1,39 @@
 // Spike: drag a loop glyph in 3D (three.js); on release, ink it with Penrose from that view.
+// Pick a family glyph, roll a random loop, or mutate the current one; the URL always holds
+// the current loop, view and brush, so any glyph can be shared or saved to the gallery.
 import * as THREE from "three";
 import { TrackballControls } from "three/addons/controls/TrackballControls.js";
 import { compile, optimize, toSVG, showError } from "@penrose/core";
-import { loopSubstance, withBrush, withView } from "./glyph-text.js";
+import {
+  loopSubstance, withBrush, withView,
+  star, encodeLoop, decodeLoop, canonicalCode, familyNames, randomLoop, mutateLoop,
+} from "./glyph-text.js";
 
 const PAPER = 0xf5f0e3;
 const INK = 0x17140f;
 const TILT = 0.52;                 // glass.style's default view
 const HALF = 200 / 165;            // glass.style: canvas half-width / sphere radius in px
 const DIST = 5;                    // camera distance (orthographic, so only depth/fog uses it)
+const BRUSH = { base: 6.5, momentum: 1.0, pressure: 1.0 };   // glass.style's brush block
 
-const [domain, glassStyle, data] = await Promise.all([
+const [domain, glassStyle, data, gallery] = await Promise.all([
   fetch("/penrose/tammes-glyph.domain").then((r) => r.text()),
   fetch("/penrose/styles/glass.style").then((r) => r.text()),
   fetch("./data.json").then((r) => r.json()),
+  fetch("./gallery.json").then((r) => (r.ok ? r.json() : [])).catch(() => []),
 ]);
 const P = data.points.map((p) => new THREE.Vector3(...p));
 const N = P.length;
+const FAMILY = familyNames(data.loops, data.symmetries);   // canonical code -> "A1".."C6"
 
-// brush defaults match glass.style's brush block
-const state = { loop: "A", k: 1, base: 6.5, momentum: 1.0, pressure: 1.0 };
-const cycle = () => {
-  const L = data.loops[state.loop];
-  return L.map((_, i) => L[(state.k * i) % N]);
-};
+// The glyph on screen is star(root, k). `family` names the root when it's A, B or C.
+const state = { root: data.loops.A, family: "A", k: 1, ...BRUSH };
+const cycle = () => star(state.root, state.k);
+
+/** Short name for what's on screen: "B4" for a family glyph, else its 12-character code. */
+function loopName() {
+  return state.family ? `${state.family}${state.k}` : encodeLoop(cycle());
+}
 
 // ---------------------------------------------------------------- 3D view
 
@@ -37,15 +47,14 @@ scene.background = new THREE.Color(PAPER);
 scene.fog = new THREE.Fog(PAPER, DIST - 0.6, DIST + 1.6);   // far side of the sphere fades into the paper
 
 const camera = new THREE.OrthographicCamera(-HALF, HALF, HALF, -HALF, 0.1, 20);
-// start where glass.style's default view is: the symmetry axis tilted toward the viewer
-function resetView() {
-  const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -TILT);
+const DEFAULT_VIEW = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -TILT);
+function setView(q) {
   camera.position.set(0, 0, DIST).applyQuaternion(q);
   camera.up.set(0, 1, 0).applyQuaternion(q);
   camera.lookAt(0, 0, 0);
   camera.updateMatrixWorld();
 }
-resetView();   // before the controls exist: they record the camera's starting pose
+setView(DEFAULT_VIEW);   // before the controls exist: they record the camera's starting pose
 
 const controls = new TrackballControls(camera, renderer.domElement);
 controls.noZoom = true;
@@ -65,7 +74,6 @@ const rim = new THREE.LineLoop(
 );
 scene.add(rim);
 
-// points
 const dotGeo = new THREE.SphereGeometry(0.022, 16, 12);
 const dotMat = new THREE.MeshBasicMaterial({ color: 0x55504a });
 for (const p of P) scene.add(new THREE.Mesh(dotGeo, dotMat).translateX(p.x).translateY(p.y).translateZ(p.z));
@@ -77,8 +85,7 @@ for (const [a, b] of data.edges) {
   scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), arcMat));
 }
 
-// the loop: the same momentum path as the brush model (midpoint to midpoint, the vertex as
-// the control point), as a tube
+// the loop as a tube along the brush model's path
 const loopMat = new THREE.MeshBasicMaterial({ color: INK });
 let loopMesh = null;
 function buildLoop() {
@@ -115,7 +122,23 @@ renderer.setAnimationLoop(() => {
   renderer.render(scene, camera);
 });
 
-// ---------------------------------------------------------------- Penrose ink
+// ---------------------------------------------------------------- Penrose
+
+/** World-to-view rotation for a camera orientation, as glass.style's view block wants it. */
+const viewMatrix = (q) => new THREE.Matrix4().makeRotationFromQuaternion(q).invert();
+
+async function penroseSVG(c, style) {
+  const compiled = await compile({
+    domain, substance: loopSubstance(data.points, c), style, variation: "spike", excludeWarnings: [],
+  });
+  if (compiled.isErr()) throw new Error(showError(compiled.error));
+  const optimized = optimize(compiled.value);
+  if (optimized.isErr()) throw new Error(showError(optimized.error));
+  const svg = await toSVG(optimized.value, async () => undefined, "spike");
+  svg.removeAttribute("width");
+  svg.removeAttribute("height");
+  return svg;
+}
 
 const ink = document.getElementById("ink");
 const status = document.getElementById("status");
@@ -125,20 +148,12 @@ async function inkNow() {
   if (running) return void (pending = true);
   running = true;
   ink.classList.add("busy");
-  const R = new THREE.Matrix4().copy(camera.matrixWorld).invert();   // world -> view
   const t0 = performance.now();
   try {
-    const compiled = await compile({
-      domain, substance: loopSubstance(data.points, cycle()), style: withBrush(withView(glassStyle, R.elements), state), variation: "spike", excludeWarnings: [],
-    });
-    if (compiled.isErr()) throw new Error(showError(compiled.error));
-    const optimized = optimize(compiled.value);
-    if (optimized.isErr()) throw new Error(showError(optimized.error));
-    const svg = await toSVG(optimized.value, async () => undefined, "spike");
-    svg.removeAttribute("width");
-    svg.removeAttribute("height");
-    ink.replaceChildren(svg);
-    status.textContent = `ink, Penrose · loop ${state.loop}, k = ${state.k} · ${Math.round(performance.now() - t0)} ms`;
+    const style = withBrush(withView(glassStyle, viewMatrix(camera.quaternion).elements), state);
+    ink.replaceChildren(await penroseSVG(cycle(), style));
+    status.textContent = `ink, Penrose · ${Math.round(performance.now() - t0)} ms`;
+    saveToURL();
   } catch (e) {
     status.textContent = "Penrose error, see console";
     console.error(e);
@@ -154,44 +169,184 @@ async function inkNow() {
 
 controls.addEventListener("end", inkNow);
 
+// Small renders for the family table and gallery, one at a time so the page stays responsive.
+const thumbQueue = [];
+let thumbsRunning = false;
+function thumbnail(el, c, quaternion = DEFAULT_VIEW, brush = BRUSH) {
+  thumbQueue.push(async () => {
+    const style = withBrush(withView(glassStyle, viewMatrix(quaternion).elements), brush);
+    el.replaceChildren(await penroseSVG(c, style));
+  });
+  if (!thumbsRunning) drainThumbs();
+}
+async function drainThumbs() {
+  thumbsRunning = true;
+  while (thumbQueue.length) {
+    await new Promise((r) => setTimeout(r, 0));   // let input and the 3D view breathe
+    try { await thumbQueue.shift()(); } catch (e) { console.error(e); }
+  }
+  thumbsRunning = false;
+}
+
+// ---------------------------------------------------------------- URL state
+//   ?loop=B4 | ?loop=3192a56c487b   &view=qx,qy,qz,qw   &brush=weight,momentum,pressure
+
+function stateURL() {
+  const q = camera.quaternion;
+  const params = new URLSearchParams({
+    loop: loopName(),
+    view: [q.x, q.y, q.z, q.w].map((v) => +v.toFixed(4)).join(","),
+    brush: [state.base, state.momentum, state.pressure].map((v) => +v.toFixed(2)).join(","),
+  });
+  return `${location.origin}${location.pathname}?${params}`;
+}
+function saveToURL() {
+  history.replaceState(null, "", stateURL());
+  showLoopInfo();
+}
+
+/** Apply a {loop, view, brush} description (from the URL or a gallery entry). */
+function applyCode({ loop, view, brush }) {
+  const fam = /^([ABC])([1-6])$/.exec(loop ?? "");
+  if (fam) Object.assign(state, { root: data.loops[fam[1]], family: fam[1], k: Number(fam[2]) });
+  else if (decodeLoop(loop)) Object.assign(state, { root: decodeLoop(loop), family: null, k: 1 });
+
+  const q = (view ?? "").split(",").map(Number);
+  if (q.length === 4 && q.every(Number.isFinite) && Math.hypot(...q) > 0.5) {
+    setView(new THREE.Quaternion(...q).normalize());
+  }
+  const b = (brush ?? "").split(",").map(Number);
+  if (b.length === 3 && b.every(Number.isFinite)) {
+    state.base = clamp(b[0], 1.5, 16);
+    state.momentum = clamp(b[1], 0.05, 1);
+    state.pressure = clamp(b[2], 0, 2.5);
+  }
+  syncControls();
+  buildLoop();
+  inkNow();
+}
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
 // ---------------------------------------------------------------- controls
 
 const kInput = document.getElementById("k");
 const kOut = document.getElementById("kval");
+const SLIDERS = [["base", 1], ["momentum", 2], ["pressure", 2]];
+
+function syncControls() {
+  kInput.value = state.k;
+  kOut.textContent = state.k;
+  for (const [key, digits] of SLIDERS) {
+    document.getElementById(key).value = state[key];
+    document.getElementById(key + "val").textContent = state[key].toFixed(digits);
+  }
+  for (const b of document.querySelectorAll("#families button")) {
+    b.setAttribute("aria-pressed", String(b.dataset.name === `${state.family}${state.k}`));
+  }
+}
+
+function showLoopInfo() {
+  const canon = canonicalCode(cycle(), data.symmetries);
+  const same = FAMILY.get(canon);
+  const name = loopName();
+  document.getElementById("code").textContent = name;
+  document.getElementById("codeinfo").textContent =
+    state.family ? `family glyph · canonical ${canon}`
+    : same ? `the same glyph as ${same}, turned · canonical ${canon}`
+    : `canonical ${canon}`;
+}
+
 kInput.addEventListener("input", () => {
   state.k = Number(kInput.value);
-  kOut.textContent = state.k;
+  syncControls();
   buildLoop();
   inkNow();
 });
-for (const b of document.querySelectorAll("[data-loop]")) {
-  b.addEventListener("click", () => {
-    state.loop = b.dataset.loop;
-    document.querySelectorAll("[data-loop]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-    buildLoop();
-    inkNow();
-  });
-}
-// brush sliders: the 3D tube follows weight and momentum at once; the ink re-renders
-// (requests made while Penrose is busy collapse into one follow-up render)
-for (const [key, digits] of [["base", 1], ["momentum", 2], ["pressure", 2]]) {
+
+for (const [key, digits] of SLIDERS) {
   const input = document.getElementById(key);
-  const out = document.getElementById(key + "val");
-  input.value = state[key];
-  out.textContent = state[key].toFixed(digits);
   input.addEventListener("input", () => {
     state[key] = Number(input.value);
-    out.textContent = state[key].toFixed(digits);
+    document.getElementById(key + "val").textContent = state[key].toFixed(digits);
     if (key !== "pressure") buildLoop();
     inkNow();
   });
 }
 
+document.getElementById("random").addEventListener("click", () => {
+  Object.assign(state, { root: randomLoop(N), family: null, k: 1 });
+  syncControls();
+  buildLoop();
+  inkNow();
+});
+document.getElementById("mutate").addEventListener("click", () => {
+  Object.assign(state, { root: mutateLoop(cycle()), family: null, k: 1 });
+  syncControls();
+  buildLoop();
+  inkNow();
+});
 document.getElementById("reset").addEventListener("click", () => {
-  resetView();
+  setView(DEFAULT_VIEW);
   inkNow();
 });
 
-buildLoop();
+async function copy(text, button) {
+  try {
+    await navigator.clipboard.writeText(text);
+    const was = button.textContent;
+    button.textContent = "copied";
+    setTimeout(() => (button.textContent = was), 1200);
+  } catch {
+    prompt("Copy this:", text);
+  }
+}
+document.getElementById("copylink").addEventListener("click", (e) => copy(stateURL(), e.currentTarget));
+document.getElementById("copyentry").addEventListener("click", (e) => {
+  const p = new URL(stateURL()).searchParams;
+  const entry = { title: "untitled", loop: p.get("loop"), view: p.get("view"), brush: p.get("brush"), note: "" };
+  copy(JSON.stringify(entry, null, 2) + ",", e.currentTarget);
+});
+
+// the family table: 3 surface loops x k = 1..6, each a button with its own thumbnail
+const families = document.getElementById("families");
+for (const r of Object.keys(data.loops)) {
+  for (let k = 1; k <= 6; k++) {
+    const b = document.createElement("button");
+    b.className = "thumb";
+    b.dataset.name = `${r}${k}`;
+    b.title = `loop ${r}, k = ${k}`;
+    b.innerHTML = `<div class="art"></div><span>${r}${k}</span>`;
+    b.addEventListener("click", () => applyCode({ loop: `${r}${k}` }));
+    families.append(b);
+    thumbnail(b.querySelector(".art"), star(data.loops[r], k));
+  }
+}
+
+// the curated gallery (site/spike/gallery.json)
+const galleryEl = document.getElementById("gallery");
+for (const entry of gallery) {
+  const b = document.createElement("button");
+  b.className = "thumb";
+  b.title = entry.note || entry.title;
+  b.innerHTML = `<div class="art"></div><span></span>`;
+  b.querySelector("span").textContent = entry.title;
+  b.addEventListener("click", () => applyCode(entry));
+  galleryEl.append(b);
+  const fam = /^([ABC])([1-6])$/.exec(entry.loop);
+  const c = fam ? star(data.loops[fam[1]], Number(fam[2])) : decodeLoop(entry.loop);
+  const q = (entry.view ?? "").split(",").map(Number);
+  const b3 = (entry.brush ?? "").split(",").map(Number);
+  if (c) {
+    thumbnail(
+      b.querySelector(".art"), c,
+      q.length === 4 ? new THREE.Quaternion(...q).normalize() : DEFAULT_VIEW,
+      b3.length === 3 ? { base: b3[0], momentum: b3[1], pressure: b3[2] } : BRUSH,
+    );
+  }
+}
+if (!gallery.length) galleryEl.textContent = "Nothing saved yet.";
+
+// ---------------------------------------------------------------- start
+
 resize();
-inkNow();
+applyCode(Object.fromEntries(new URLSearchParams(location.search)));

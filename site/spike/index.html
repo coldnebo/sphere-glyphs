@@ -33,19 +33,23 @@
       </figure>
     </section>
 
+    <section class="codebar" aria-live="polite">
+      <span class="label">loop</span>
+      <code id="code"></code>
+      <span id="codeinfo" class="label"></span>
+    </section>
+
     <section class="controls">
-      <div class="group" role="radiogroup" aria-label="Surface loop">
-        <span class="label">loop</span>
-        <button data-loop="A" aria-pressed="true">A</button>
-        <button data-loop="B" aria-pressed="false">B</button>
-        <button data-loop="C" aria-pressed="false">C</button>
-      </div>
-      <label class="group">
+      <button id="random" title="Any of the ~240 million closed loops through the 13 points">random loop</button>
+      <button id="mutate" title="Reverse one stretch of the current loop: exactly two chords change">mutate</button>
+      <label class="group" title="Visit every k-th point of the loop">
         <span class="label">step k</span>
         <input id="k" type="range" min="1" max="6" step="1" value="1">
         <output id="kval">1</output>
       </label>
       <button id="reset">reset view</button>
+      <button id="copylink" title="The address bar always holds the loop, view and brush">copy link</button>
+      <button id="copyentry" title="A gallery.json entry for this glyph">copy gallery entry</button>
     </section>
 
     <section class="controls brush" aria-label="Brush">
@@ -71,6 +75,20 @@
       k = 1 follows the loop along the sphere's surface. Larger k connects every k-th point of
       the same loop, so the stroke cuts through the interior, like the star polygon {13/k} on a circle.
     </p>
+
+    <h2>Families</h2>
+    <p class="note">
+      Only three closed loops run along the sphere's contact edges (rows A, B, C). Stepping each by
+      k = 1…6 gives 18 distinct glyphs. Click one to load it.
+    </p>
+    <div id="families" class="thumbs families"></div>
+
+    <h2>Gallery</h2>
+    <p class="note">
+      Glyphs worth keeping, each with its own view and brush. To add one, use
+      <em>copy gallery entry</em> and paste it into <code>site/spike/gallery.json</code>.
+    </p>
+    <div id="gallery" class="thumbs"></div>
   </main>
   <script type="module" src="./main.js"></script>
 </body>
