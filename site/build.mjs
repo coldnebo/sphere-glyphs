@@ -11,7 +11,8 @@ import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "no
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { marked } from "marked";
-import { FIGURES } from "./figures.mjs";
+import { CARDS, FIGURES } from "./figures.mjs";
+import { writeImage } from "../src/penrose.mjs";
 
 // _site/ is self-contained and uses only relative links, so it works at any path:
 // http://localhost:8000/_site/ locally, https://<user>.github.io/sphere-glyphs/ on GitHub Pages.
@@ -21,6 +22,26 @@ import { FIGURES } from "./figures.mjs";
 //   lib/  vendor/     its shared module, three.js and the Penrose browser bundle
 const OUT = "_site";
 const EXPLORER = "../explorer/";
+// Link previews need absolute URLs; override for a fork or a custom domain.
+const SITE_URL = (process.env.SITE_URL ?? "https://coldnebo.github.io/sphere-glyphs/").replace(/\/?$/, "/");
+
+/** Render a page's 1200x630 preview card, and return its Open Graph / Twitter tags. */
+async function social({ path, title, description, card, type = "website" }) {
+  mkdirSync(join(OUT, "social"), { recursive: true });
+  await writeImage(await CARDS[card](), join(OUT, "social", `${card}.png`));
+  const image = `${SITE_URL}social/${card}.png`;
+  const tags = {
+    "og:type": type, "og:site_name": "Sphere Glyphs", "og:title": title, "og:description": description,
+    "og:url": SITE_URL + path, "og:image": image, "og:image:width": "1200", "og:image:height": "630",
+    "og:image:alt": "Glyphs drawn from loops through 13 points on a sphere",
+    "twitter:card": "summary_large_image", "twitter:title": title,
+    "twitter:description": description, "twitter:image": image,
+  };
+  return Object.entries(tags)
+    .map(([k, v]) => `<meta ${k.startsWith("og:") ? "property" : "name"}="${k}" content="${esc(v)}">`)
+    .concat(`<link rel="canonical" href="${SITE_URL + path}">`)
+    .join("\n  ");
+}
 const ARTICLES = [{ src: "site/articles/permutations.md", slug: "loops" }];
 
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
@@ -152,7 +173,10 @@ async function buildArticle({ src, slug }) {
     .replace("{{nav}}", nav)
     .replace("{{spreads}}", spreadHTML)
     .replace("{{sources}}", sources)
-    .replace("{{explorer}}", EXPLORER);
+    .replace("{{explorer}}", EXPLORER)
+    .replace("{{social}}", await social({
+      path: `${slug}/`, title: meta.title ?? coverTitle, description: meta.summary ?? "", card: slug, type: "article",
+    }));
   writeFileSync(join(dir, "index.html"), html);
   for (const f of ["article.css", "article.js"]) copyFileSync(join("site/article", f), join(dir, f));
 }
@@ -167,15 +191,20 @@ function copyTo(dest, src, transform) {
   else copyFileSync(src, dest);
 }
 
-function buildExplorer() {
+async function buildExplorer() {
   console.log(`explorer site/spike -> ${OUT}/explorer/`);
   const dir = join(OUT, "explorer");
+  const explorerTags = await social({
+    path: "explorer/", title: "Loop Explorer",
+    description: "Turn a loop through 13 points on a sphere in 3D and ink it as a glyph. Roll a random one, mutate it, and share what you find.",
+    card: "explorer",
+  });
   copyTo(join(dir, "index.html"), "site/spike/index.html", (html) =>
     html
       .replace("/node_modules/three/build/three.module.js", "../vendor/three.module.js")
       .replace("/node_modules/three/examples/jsm/", "../vendor/three-addons/")
       .replace("/node_modules/@penrose/core/dist/bundle/index.js", "../vendor/penrose-core.js")
-      .replace("<title>Loop Viewer Spike</title>", "<title>Loop Explorer</title>")
+      .replace("<title>Loop Viewer Spike</title>", `<title>Loop Explorer</title>\n  ${explorerTags}`)
       .replace("<header>",
         '<header>\n      <p class="back"><a href="../loops/">← Thirty million loops</a> · <a href="../">Sphere glyphs</a></p>'));
   copyTo(join(dir, "main.js"), "site/spike/main.js", (js) => js.replaceAll('"/penrose/', '"./penrose/'));
@@ -190,14 +219,19 @@ function buildExplorer() {
   copyTo(join(vendor, "penrose-core.js"), join(dirname(pkg("@penrose/core")), "bundle/index.js"));
 }
 
-function buildHome() {
+async function buildHome() {
   console.log(`home -> ${OUT}/index.html`);
-  copyTo(join(OUT, "index.html"), "site/home.html");
+  const tags = await social({
+    path: "", title: "Sphere Glyphs",
+    description: "A generative writing system drawn from the best possible arrangement of 13 points on a sphere.",
+    card: "home",
+  });
+  copyTo(join(OUT, "index.html"), "site/home.html", (html) => html.replace("<!-- social -->", tags));
   writeFileSync(join(OUT, ".nojekyll"), "");   // serve files as-is, no Jekyll processing
 }
 
 rmSync(OUT, { recursive: true, force: true });
 for (const a of ARTICLES) await buildArticle(a);
-buildExplorer();
-buildHome();
+await buildExplorer();
+await buildHome();
 console.log(`done: ${OUT}/`);

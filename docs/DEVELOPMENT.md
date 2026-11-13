@@ -139,3 +139,7 @@ Preview with `scripts/serve.sh` at <http://localhost:8000/_site/>.
 then `node site/build.mjs`, then a deploy of `_site/` to GitHub Pages at
 <https://coldnebo.github.io/sphere-glyphs/>. You can also run it by hand from the Actions tab.
 One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+
+Each page has Open Graph and Twitter tags, plus a 1200 × 630 preview card rendered at build time
+(`CARDS` in `site/figures.mjs`, written to `_site/social/`). Link previews need absolute URLs.
+They default to the Pages address; set `SITE_URL` to build for a fork or a custom domain.

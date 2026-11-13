@@ -32,7 +32,7 @@ function tiltMatrix(t) {
 }
 const POLE_VIEW = tiltMatrix(0);
 
-async function glyph(cycle, { view = null, brush = null } = {}) {
+export async function glyph(cycle, { view = null, brush = null } = {}) {
   let style = GLASS;
   if (view) style = withView(style, view);
   if (brush) style = withBrush(style, brush);
@@ -214,6 +214,38 @@ export async function wandering() {
 export async function explore() {
   return glyph(decodeLoop("72b491c53a68"), { brush: { base: 6.5, momentum: 0.6, pressure: 1 } });
 }
+
+// ---------------------------------------------------------------- social preview cards
+
+/**
+ * A 1200 x 630 link-preview card: one glyph large in the middle, two smaller either side.
+ * No text: the platforms print the page title and description next to it, and the build
+ * machine may not have the fonts.
+ */
+async function card(centre, left, right) {
+  const [W, H] = [1200, 630];
+  const place = (svg, size, cx) =>
+    svg.replace(/^<svg\b/, `<svg x="${cx - size / 2}" y="${(H - size) / 2}" width="${size}" height="${size}"`);
+  const [c, l, r] = await Promise.all([centre, left, right]);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">` +
+    `<rect width="100%" height="100%" fill="${PAPER}"/>` +
+    // each render brings its own square of paper, so the squares must not overlap
+    place(l, 320, 180) + place(r, 320, W - 180) + place(c, 520, W / 2) + `</svg>`;
+}
+
+export const CARDS = {
+  home: () => card(cover(), explore(), symmetric()),
+  loops: () => card(
+    glyph(star(data.loops.C, 4), { brush: { base: 7.5, momentum: 1, pressure: 1.2 } }),
+    glyph(star(data.loops.A, 2)),
+    glyph(star(data.loops.B, 5)),
+  ),
+  explorer: () => card(
+    glyph(star(data.loops.B, 2), { brush: { base: 6, momentum: 0.15, pressure: 0.6 } }),
+    glyph(decodeLoop("72b491c53a68"), { brush: { base: 6.5, momentum: 0.6, pressure: 1 } }),
+    glyph(star(data.loops.C, 4), { brush: { base: 11, momentum: 1, pressure: 2.2 } }),
+  ),
+};
 
 export const FIGURES = {
   cover, dancers, sphere, bracelet, orientations, symmetric, roadtrips, families, wandering, explore,
