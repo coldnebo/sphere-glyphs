@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sphere Glyphs</title>
+  <meta name="description" content="A generative writing system drawn from the best possible arrangement of 13 points on a sphere.">
+  <script>document.documentElement.classList.add("js")</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap">
+  <link rel="stylesheet" href="loops/article.css">
+  <style>
+    .home { min-height: 100svh; padding: 10vh 7vw 8vh; display: flex; flex-direction: column; justify-content: center; }
+    .home h1 { font: 400 clamp(3.4rem, 9vw, 8.5rem)/0.9 var(--display); letter-spacing: -0.02em; margin: 0 0 1.6rem; }
+    .home .intro { font-size: 1.3rem; max-width: 46ch; margin: 0 0 6vh; }
+    .doors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4vw; }
+    .door { text-decoration: none; display: block; }
+    .door img {
+      display: block; width: 100%; aspect-ratio: 1; object-fit: contain; background: var(--paper);
+      border-radius: 3px; box-shadow: var(--shadow); padding: clamp(10px, 2vw, 28px);
+      transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.1, 1), box-shadow 0.6s;
+    }
+    .door:hover img { transform: translateY(-6px); }
+    .door h2 { font: 400 clamp(1.8rem, 3vw, 2.6rem)/1.05 var(--display); margin: 1.4rem 0 0.4rem; color: var(--text); }
+    .door p { margin: 0; color: var(--muted); max-width: 40ch; }
+    .door:hover h2 { color: var(--accent); }
+    @media (max-width: 760px) { .doors { grid-template-columns: minmax(0, 1fr); gap: 8vh; } .home { padding: 10vh 16px 8vh; } }
+    @media (prefers-reduced-motion: no-preference) {
+      .js .home > * { opacity: 0; transform: translateY(22px); animation: rise 1.2s cubic-bezier(0.2, 0.7, 0.1, 1) forwards; }
+      .js .home > :nth-child(2) { animation-delay: 0.15s; }
+      .js .home > :nth-child(3) { animation-delay: 0.3s; }
+      .js .home > :nth-child(4) { animation-delay: 0.45s; }
+      @keyframes rise { to { opacity: 1; transform: none; } }
+    }
+  </style>
+</head>
+<body>
+  <main class="home">
+    <p class="kicker">Sphere glyphs</p>
+    <h1>Writing on a sphere</h1>
+    <p class="intro">
+      Thirteen points, spread as far apart as a sphere allows. Every glyph is a single stroke
+      through all of them: turned in three dimensions, then inked by hand-like rules.
+    </p>
+    <div class="doors">
+      <a class="door" href="loops/">
+        <img src="loops/figures/cover.svg" alt="A glyph: loop C, stepped by 4">
+        <h2>Thirty million loops</h2>
+        <p>How many glyphs there are, and what they share with bracelets, ball games and a puzzle Hamilton sold in 1859.</p>
+      </a>
+      <a class="door" href="explorer/">
+        <img src="loops/figures/explore.svg" alt="A glyph from the gallery">
+        <h2>The explorer</h2>
+        <p>Turn a loop in 3D and ink it. Roll a random one, mutate it, and share what you find.</p>
+      </a>
+    </div>
+  </main>
+  <footer>
+    <p><a href="https://github.com/coldnebo/sphere-glyphs">Source on GitHub</a></p>
+  </footer>
+</body>
+</html>

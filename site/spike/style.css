@@ -73,3 +73,5 @@ h2 { font-weight: normal; font-size: 1.3rem; margin: 36px 0 4px; }
 .thumb .art svg { display: block; width: 100%; height: 100%; }
 .thumb span { font-size: 0.8rem; color: var(--muted); }
 .thumb[aria-pressed="true"] span { color: var(--ink); }
+.back { margin: 0 0 18px; font-size: 0.9rem; color: var(--muted); }
+.back a { color: inherit; }

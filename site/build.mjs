@@ -7,13 +7,20 @@
 //   ## Heading                                            -> one spread; its fig: images are the plate
 //   **Look further:** ...                                 -> a breakout panel
 //   text[^key]  /  [^key]: citation (under ## Sources)    -> numbered citations and the sources list
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { marked } from "marked";
 import { FIGURES } from "./figures.mjs";
 
+// _site/ is self-contained and uses only relative links, so it works at any path:
+// http://localhost:8000/_site/ locally, https://<user>.github.io/sphere-glyphs/ on GitHub Pages.
+//   index.html        home
+//   loops/            the article
+//   explorer/         the interactive explorer (site/spike, packaged)
+//   lib/  vendor/     its shared module, three.js and the Penrose browser bundle
 const OUT = "_site";
-const EXPLORER = process.env.EXPLORER_URL ?? "/site/spike/";
+const EXPLORER = "../explorer/";
 const ARTICLES = [{ src: "site/articles/permutations.md", slug: "loops" }];
 
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
@@ -150,5 +157,47 @@ async function buildArticle({ src, slug }) {
   for (const f of ["article.css", "article.js"]) copyFileSync(join("site/article", f), join(dir, f));
 }
 
+// ---------------------------------------------------------------- explorer
+
+const pkg = (spec) => fileURLToPath(import.meta.resolve(spec));
+
+function copyTo(dest, src, transform) {
+  mkdirSync(dirname(dest), { recursive: true });
+  if (transform) writeFileSync(dest, transform(readFileSync(src, "utf8")));
+  else copyFileSync(src, dest);
+}
+
+function buildExplorer() {
+  console.log(`explorer site/spike -> ${OUT}/explorer/`);
+  const dir = join(OUT, "explorer");
+  copyTo(join(dir, "index.html"), "site/spike/index.html", (html) =>
+    html
+      .replace("/node_modules/three/build/three.module.js", "../vendor/three.module.js")
+      .replace("/node_modules/three/examples/jsm/", "../vendor/three-addons/")
+      .replace("/node_modules/@penrose/core/dist/bundle/index.js", "../vendor/penrose-core.js")
+      .replace("<title>Loop Viewer Spike</title>", "<title>Loop Explorer</title>")
+      .replace("<header>",
+        '<header>\n      <p class="back"><a href="../loops/">← Thirty million loops</a> · <a href="../">Sphere glyphs</a></p>'));
+  copyTo(join(dir, "main.js"), "site/spike/main.js", (js) => js.replaceAll('"/penrose/', '"./penrose/'));
+  for (const f of ["style.css", "data.json", "gallery.json"]) copyTo(join(dir, f), join("site/spike", f));
+  copyTo(join(dir, "penrose/tammes-glyph.domain"), "penrose/tammes-glyph.domain");
+  copyTo(join(dir, "penrose/styles/glass.style"), "penrose/styles/glass.style");
+  copyTo(join(OUT, "lib/glyph-text.js"), "site/lib/glyph-text.js");
+
+  const vendor = join(OUT, "vendor");
+  copyTo(join(vendor, "three.module.js"), pkg("three"));
+  copyTo(join(vendor, "three-addons/controls/TrackballControls.js"), pkg("three/addons/controls/TrackballControls.js"));
+  copyTo(join(vendor, "penrose-core.js"), join(dirname(pkg("@penrose/core")), "bundle/index.js"));
+}
+
+function buildHome() {
+  console.log(`home -> ${OUT}/index.html`);
+  copyTo(join(OUT, "index.html"), "site/home.html");
+  writeFileSync(join(OUT, ".nojekyll"), "");   // serve files as-is, no Jekyll processing
+}
+
+rmSync(OUT, { recursive: true, force: true });
 for (const a of ARTICLES) await buildArticle(a);
+buildExplorer();
+buildHome();
 console.log(`done: ${OUT}/`);

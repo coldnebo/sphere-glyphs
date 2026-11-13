@@ -118,8 +118,10 @@ The spike's data comes from `python3 src/site_data.py examples/glyphs/glyphs.jso
 
 ## Site build
 
-`node site/build.mjs` (in the container) builds the articles into `_site/`, which git ignores.
-Preview with `scripts/serve.sh` at <http://localhost:8000/_site/loops/>.
+`node site/build.mjs` (in the container) builds the whole site into `_site/`, which git ignores:
+the home page, the articles, and the explorer packaged with its three.js and Penrose files.
+Every link is relative, so the same files work locally and under GitHub Pages' `/sphere-glyphs/`.
+Preview with `scripts/serve.sh` at <http://localhost:8000/_site/>.
 
 - Articles are Markdown in `site/articles/`. Each `## Section` becomes a full-screen spread.
   `![caption](fig:name)` places a figure from `site/figures.mjs`. A paragraph starting with
@@ -130,3 +132,10 @@ Preview with `scripts/serve.sh` at <http://localhost:8000/_site/loops/>.
   diagrams are inlined so their strokes can animate.
 - The page template, styles and scroll script are in `site/article/`.
 - `scripts/run-tests.sh` runs the build, so a missing figure or an undefined citation fails the tests.
+
+## Deployment
+
+`.github/workflows/pages.yml` runs on every push to `main`: the test suite (`scripts/test.sh --ci`),
+then `node site/build.mjs`, then a deploy of `_site/` to GitHub Pages at
+<https://coldnebo.github.io/sphere-glyphs/>. You can also run it by hand from the Actions tab.
+One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**.

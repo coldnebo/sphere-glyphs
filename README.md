@@ -1,5 +1,7 @@
 # sphere-glyphs
 
+**Site:** <https://coldnebo.github.io/sphere-glyphs/>: the visual essay *Thirty million loops* and the interactive explorer.
+
 A generative writing system built from the best possible arrangement of 13 points on a sphere.
 Each glyph is a path through those points. It is projected onto the page and drawn with a brush
 model that ranges from formal (seal script) to expressive (cursive). Rendering uses

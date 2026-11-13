@@ -47,5 +47,7 @@ CMD ["bash"]
 
 FROM base AS test
 COPY --chown=node:node . .
+# the workdir itself was created by root; the tests write into it (the site build makes _site/)
+RUN chown node:node .
 USER node
 CMD ["scripts/run-tests.sh"]
