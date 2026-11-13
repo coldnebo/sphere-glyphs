@@ -17,6 +17,7 @@ import { path3d } from "./cloud.js";
 
 const PAPER = [245, 240, 227];
 const INK = [23, 20, 15];
+const WHITE = [255, 253, 248];
 const PALETTE = [[138, 75, 42], [92, 104, 128], [176, 138, 92], [60, 66, 74], [150, 112, 98], [118, 128, 112]];
 const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
 
@@ -193,7 +194,10 @@ function shadeTriangle(buf, zb, P, A, look) {
       nx /= len; ny /= len; nz /= len;
       if (nz < 0) { nx = -nx; ny = -ny; nz = -nz; }
       const lam = Math.max(0, nx * light[0] + ny * light[1] + nz * light[2]);
-      const spec = specular * Math.max(0, nx * half[0] + ny * half[1] + nz * half[2]) ** 48;
+      // a glossy highlight: a tight white glint inside a broader, softer sheen
+      const nh = Math.max(0, nx * half[0] + ny * half[1] + nz * half[2]);
+      const glint = specular * nh ** 90, sheen = specular * 0.35 * nh ** 12;
+      const spec = glint + sheen;
       const edgeGlow = 0.1 * (1 - nz) ** 2;                    // a little light where it turns away
       const base = [lerp("c", 0), lerp("c", 1), lerp("c", 2)];
       // place on the disc: contour rings, and grain
@@ -216,7 +220,9 @@ function shadeTriangle(buf, zb, P, A, look) {
         out = mix(out, rainbow, Math.min(0.85, iridescence * (0.18 + 0.55 * (1 - nz) ** 1.5 + 0.6 * spec)));
       }
       // light reflected off the surface: added on top, so a clear film still glints
-      out = mix(out, PAPER, Math.min(1, spec + edgeGlow));
+      // the glint is white light, not paper; the sheen and the edge glow are softer
+      out = mix(out, PAPER, Math.min(1, sheen + edgeGlow));
+      out = mix(out, WHITE, Math.min(1, glint * 1.4));
       buf.rgb[k * 3] = out[0];
       buf.rgb[k * 3 + 1] = out[1];
       buf.rgb[k * 3 + 2] = out[2];
@@ -270,7 +276,7 @@ export function paintFilm(buf, points, loop, opts = {}) {
   const half = (() => { const h = [light[0], light[1], light[2] + 1], s = Math.hypot(...h); return h.map((x) => x / s); })();
   const look = {
     light, half,
-    specular: opts.specular ?? 0.55,          // highlight strength
+    specular: opts.specular ?? 1,             // highlight strength
     // contour rings across the disc. Off by default: they trace how the film was built (rings
     // around the disc's centre) rather than its shape, which the highlights already show
     contours: opts.contours ?? 0,
