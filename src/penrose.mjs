@@ -34,7 +34,10 @@ export async function renderSVG({ domain, substance, style, variation = "tammes"
 export async function writeImage(svg, out, { width } = {}) {
   if (out.toLowerCase().endsWith(".png")) {
     const { Resvg } = await import("@resvg/resvg-js");
-    const opts = width ? { fitTo: { mode: "width", value: width } } : {};
+    const opts = {
+      font: { loadSystemFonts: true, fontDirs: ["/usr/share/fonts"], defaultFontFamily: "DejaVu Serif" },
+      ...(width ? { fitTo: { mode: "width", value: width } } : {}),
+    };
     writeFileSync(out, new Resvg(svg, opts).render().asPng());
   } else {
     writeFileSync(out, svg);

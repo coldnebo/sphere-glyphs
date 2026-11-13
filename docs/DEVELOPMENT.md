@@ -86,6 +86,7 @@ scripts/run-tests.sh
 | `tests/test_tammes.py`  | The solver recovers N=4 (tetrahedron) and N=6 (octahedron). The committed 13-point solution has 57.1367°, 24 contact edges, and degrees 3×4 and 4×9. |
 | `tests/test_glyphs.py`  | The orientation frame. 3,120 paths, 8 symmetries, 199 glyphs. Every step is a contact edge. Regenerating `examples/glyphs` gives byte-identical files. |
 | `tests/test_stars.py`   | The star cycles are permutations. k and 13−k are reverses. Regenerating `examples/stars` gives byte-identical files. |
+| `tests/test_spells.py`  | The 11-point sphere is the Tammes optimum (63.4349°, 25 contacts, matching the solver). The hub sits at the pole. Arcs, including antipodal ones, are correct. Every spell has the shared base. Every Substance statement has distinct numbers. Regenerating `examples/spells` gives byte-identical files. |
 | `tests/render.test.mjs` | Every style compiles, optimizes and renders through Penrose. PNG rasterization works. |
 
 The byte-identical tests are a regression net. If you change `glyphs.py` or `stars.py` on

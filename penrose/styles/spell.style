@@ -1,0 +1,141 @@
+-- Spell style: graph glyphs (Link) on the 11-point sphere.
+--
+-- Same Lambert equal-area projection as seal/brush, centred on the north pole (the hub):
+--     (x, y, z)  ->  (x, y) * sqrt(2 / (1 + z))
+-- Each Link is a great-circle arc, sampled at 5 interior points by spells.py. The style
+-- projects the 7 points and inks them as one brush stroke: a filled outline through
+-- offset points, pressed at the start and tapering to a lifted tip at the end.
+
+canvas {
+  width = 400
+  height = 400
+}
+
+global {
+  scale = 88.0
+  paper = rgba(0.96, 0.94, 0.89, 1.0)
+  ink = rgba(0.09, 0.08, 0.07, 0.90)
+  ghost = rgba(0.45, 0.20, 0.12, 0.16)
+  base = 6.0
+
+  shape ground = Rectangle {
+    center: (0.0, 0.0)
+    width: 400.0
+    height: 400.0
+    fillColor: paper
+    strokeColor: none()
+  }
+  -- the rim: image of the south pole, where the icosahedron's missing vertex would be
+  shape horizon = Circle {
+    center: (0.0, 0.0)
+    r: 2.0 * scale
+    fillColor: none()
+    strokeColor: ghost
+    strokeWidth: 0.8
+  }
+  layer horizon above ground
+}
+
+forall Vertex v; Number x; Number y; Number z
+where At(v, x, y, z) {
+  v.x = x
+  v.y = y
+  v.z = z
+  v.k = global.scale * sqrt(2.0 / (1.0 + z))
+  v.p = (v.k * x, v.k * y)
+
+  shape v.dot = Circle {
+    center: v.p
+    r: 2.2
+    fillColor: global.ghost
+    strokeColor: none()
+  }
+  layer v.dot above global.ground
+}
+
+-- faint contact graph of the icosahedron-minus-one
+forall Vertex a; Vertex b
+where Contact(a, b) {
+  mx = a.x + b.x
+  my = a.y + b.y
+  mz = a.z + b.z
+  mn = sqrt(mx * mx + my * my + mz * mz)
+  mk = global.scale * sqrt(2.0 / (1.0 + mz / mn))
+  m = (mk * mx / mn, mk * my / mn)
+
+  shape arc = Path {
+    d: interpolateQuadraticFromPoints("open", a.p, m, b.p)
+    strokeColor: global.ghost
+    strokeWidth: 0.8
+    fillColor: none()
+  }
+  layer arc above global.ground
+}
+
+-- (the style parser wants the whole declaration list on one line)
+forall Vertex a; Vertex b; Number x1; Number y1; Number z1; Number x2; Number y2; Number z2; Number x3; Number y3; Number z3; Number x4; Number y4; Number z4; Number x5; Number y5; Number z5
+where Link(a, b, x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, x5, y5, z5) {
+  -- project the arc
+  k1 = global.scale * sqrt(2.0 / (1.0 + z1))
+  k2 = global.scale * sqrt(2.0 / (1.0 + z2))
+  k3 = global.scale * sqrt(2.0 / (1.0 + z3))
+  k4 = global.scale * sqrt(2.0 / (1.0 + z4))
+  k5 = global.scale * sqrt(2.0 / (1.0 + z5))
+  p0 = a.p
+  p1 = (k1 * x1, k1 * y1)
+  p2 = (k2 * x2, k2 * y2)
+  p3 = (k3 * x3, k3 * y3)
+  p4 = (k4 * x4, k4 * y4)
+  p5 = (k5 * x5, k5 * y5)
+  p6 = b.p
+
+  -- normals from central differences
+  n0 = rot90(normalize(p1 - p0))
+  n1 = rot90(normalize(p2 - p0))
+  n2 = rot90(normalize(p3 - p1))
+  n3 = rot90(normalize(p4 - p2))
+  n4 = rot90(normalize(p5 - p3))
+  n5 = rot90(normalize(p6 - p4))
+  n6 = rot90(normalize(p6 - p5))
+
+  -- pressure: lands heavy, eases off, lifts to a point short of b
+  h = global.base / 2.0
+  h0 = 1.30 * h
+  h1 = 1.15 * h
+  h2 = 1.00 * h
+  h3 = 0.90 * h
+  h4 = 0.75 * h
+  h5 = 0.50 * h
+  h6 = 0.08 * h
+
+  -- outline: down the left side, back up the right (list literals must stay on one line)
+  outline = [p0 + h0 * n0, p1 + h1 * n1, p2 + h2 * n2, p3 + h3 * n3, p4 + h4 * n4, p5 + h5 * n5, p6 + h6 * n6, p6 - h6 * n6, p5 - h5 * n5, p4 - h4 * n4, p3 - h3 * n3, p2 - h2 * n2, p1 - h1 * n1, p0 - h0 * n0]
+
+  shape stroke = Path {
+    d: interpolatingSpline("closed", outline, 0.25)
+    fillColor: global.ink
+    strokeColor: global.ink
+    strokeWidth: 0.4
+  }
+  shape press = Circle {
+    center: p0
+    r: h0
+    fillColor: global.ink
+    strokeColor: none()
+  }
+  layer stroke above global.horizon
+  layer press above global.horizon
+}
+
+-- the source diagram's filled dot
+forall Vertex v
+where Mark(v) {
+  shape v.mark = Circle {
+    center: v.p
+    r: global.base * 1.1
+    fillColor: none()
+    strokeColor: global.ink
+    strokeWidth: 1.6
+  }
+  layer v.mark above global.horizon
+}

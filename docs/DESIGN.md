@@ -150,6 +150,11 @@ Design decisions:
    computes at runtime.
 4. Contact arcs are approximated by quadratics through the projected arc midpoint. That's
    fine for 57° arcs but not exact.
+5. **Repeated numbers in one Substance statement break matching.** Penrose binds the
+   `Number` variables of a Style `forall` injectively, so `At(v, 0, 0, 1)` (with x = y)
+   never matches, and the vertex silently disappears. `-0` counts as equal to `0`.
+   `spells.py` nudges repeated values by 1e-6 (`literals()`), and a test guards it. The
+   13-point data avoids this only by luck.
 
 Items 1 and 3 both point to a renderer outside Penrose that splits pieces at the outline
 and sorts them by depth.

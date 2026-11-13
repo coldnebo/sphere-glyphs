@@ -27,6 +27,13 @@ WORKDIR /workspace
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund && chown -R node:node /workspace
 
+# Extra system packages go after the slow dependency layers (pip downloads scipy),
+# so changing this list doesn't reinstall everything above it.
+# fonts: resvg needs a real font to draw captions on contact sheets.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends fonts-dejavu-core \
+ && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /workspace/sphere-glyphs
 
 

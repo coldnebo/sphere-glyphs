@@ -18,3 +18,11 @@ predicate Contact(Vertex a, Vertex b)
 predicate Step(Vertex a, Vertex b)
 predicate Start(Vertex v)
 predicate End(Vertex v)
+
+-- Graph glyphs (spells): an undirected stroke between two vertices, drawn from a to b.
+-- The 15 numbers are 5 interior points of its great-circle arc (x, y, z each),
+-- sampled by spells.py so that antipodal pairs get a definite route.
+predicate Link(Vertex a, Vertex b, Number x1, Number y1, Number z1, Number x2, Number y2, Number z2, Number x3, Number y3, Number z3, Number x4, Number y4, Number z4, Number x5, Number y5, Number z5)
+
+-- A vertex drawn as a filled dot in the source diagram.
+predicate Mark(Vertex v)

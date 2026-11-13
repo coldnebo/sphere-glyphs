@@ -46,6 +46,7 @@ src/              pipeline
   tammes.py         solve Tammes(N) numerically, extract the contact graph
   glyphs.py         orient the sphere, enumerate Hamiltonian paths, dedupe by symmetry -> Substances
   stars.py          spherical star loops i -> k*i mod 13 -> Substances
+  spells.py         spell-book circles -> the 11-point sphere (icosahedron minus one) -> Substances
   render.mjs        render one Domain/Substance/Style trio to SVG or PNG
   sheet.mjs         tile many renders into a contact sheet
   penrose.mjs       shared headless Penrose helpers
@@ -54,10 +55,12 @@ penrose/          the Penrose program
   styles/seal.style     formal: exact projected great-circle arcs, uniform weight
   styles/brush.style    expressive: momentum-rounded corners, pressure from turn sharpness
   styles/glass.style    transparent sphere, orthographic + tilt; back wash / halo / front ink
+  styles/spell.style    graph glyphs (Link): each edge a tapered brush stroke
 examples/         generated data, see examples/README.md
   tammes13.json     the 13-point optimum
   glyphs/           24 sample surface glyphs + glyphs.json (all 199)
   stars/            the six {13/k} star loops
+  spells/           5 spells from The Spell Writing Guide (Gorilla of Destiny), as 11-point sphere glyphs
 docs/             DESIGN.md, DEVELOPMENT.md, images/
 tests/            pytest + node:test
 scripts/          dev.sh, test.sh (host); run-tests.sh, build-examples.sh (in-container)
@@ -74,6 +77,15 @@ together with the Domain and one of the Styles.
 - **Tilt:** `tilt` in `glass.style`. 0.0 looks straight down the axis; values up to about 1.2 work.
 - **Pole and orientation:** `largest_hole` and `orient` in `src/glyphs.py`.
 
+## Credits
+
+- The spell circles in `examples/spells/` come from **_The Spell Writing Guide_** by Gorilla of
+  Destiny ([DriveThruRPG](https://www.drivethrurpg.com/en/product/429711/the-spell-writing-guide),
+  [author's site](https://www.gorillaofdestiny.com/books-and-compendiums)). The original
+  designs belong to the author. See [examples/README.md](examples/README.md#spells).
+- Rendering uses [Penrose](https://penrose.cs.cmu.edu) (Carnegie Mellon University).
+
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT, for the code in this repository. See [LICENSE](LICENSE). The spell data is the author's
+and isn't covered by this license.

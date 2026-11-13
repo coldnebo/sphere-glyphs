@@ -12,6 +12,8 @@ const cases = [
   ["brush", "examples/glyphs/glyph-0000.substance"],
   ["glass", "examples/glyphs/glyph-0000.substance"],
   ["glass", "examples/stars/star-13-2.substance"],
+  ["spell", "examples/spells/acid-splash.substance"],
+  ["spell", "examples/spells/chill-touch.substance"],
 ];
 
 for (const [style, substance] of cases) {

@@ -21,7 +21,7 @@ if [[ "$(uname -s)" == Linux && "$(id -u)" != 0 ]]; then
   USER_ARGS=(--user "$(id -u):$(id -g)" -e HOME=/tmp)
 fi
 
-TTY_ARGS=()
+TTY_ARGS=(-i)   # keep stdin open so heredocs and pipes reach the container
 if [[ -t 0 && -t 1 ]]; then TTY_ARGS=(-it); fi
 
 build() {  # build <target>   (cached layers make this ~instant after the first time)
