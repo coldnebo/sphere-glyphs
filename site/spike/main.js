@@ -9,6 +9,7 @@ import {
   star, encodeLoop, decodeLoop, canonicalCode, familyNames, randomLoop, mutateLoop,
 } from "../lib/glyph-text.js";
 import { BRUSHES, paintGlyph } from "../lib/brush.js";
+import { paintCloud } from "../lib/cloud.js";
 
 const PAPER = 0xf5f0e3;
 const INK = 0x17140f;
@@ -31,7 +32,8 @@ const FAMILY = familyNames(data.loops, data.symmetries);   // canonical code -> 
 // `style` is "glass" (Penrose) or a brush preset; `ink` holds the brush's own settings.
 const INK_DEFAULT = { ink: 1, dryness: 1, splatter: 1, grit: 0 };
 const state = { root: data.loops.A, family: "A", k: 1, ...BRUSH, style: "glass", ink: { ...INK_DEFAULT } };
-const isBrush = () => state.style !== "glass";
+const isBrush = () => state.style !== "glass" && state.style !== "cloud";
+const isPainted = () => state.style !== "glass";       // brush or cloud: drawn on a canvas
 const cycle = () => star(state.root, state.k);
 
 /** Short name for what's on screen: "B4" for a family glyph, else its 12-character code. */
@@ -154,13 +156,12 @@ function viewRows(q) {
   return [[e[0], e[4], e[8]], [e[1], e[5], e[9]], [e[2], e[6], e[10]]];
 }
 
-/** Paint the current glyph with the brush into a new canvas of `px` pixels. */
-function brushCanvas(px, c = cycle(), q = camera.quaternion, settings = state) {
+/** Paint the current glyph (brush or cloud) into a new canvas of `px` pixels. */
+function brushCanvas(px, c = cycle(), q = camera.quaternion, settings = state, style = state.style) {
   const buf = { w: px, h: px, rgb: new Float32Array(px * px * 3) };
-  paintGlyph(buf, data.points, c, {
-    size: px, view: viewRows(q),
-    base: settings.base, momentum: settings.momentum, pressure: settings.pressure, ...settings.ink,
-  });
+  const shape = { size: px, view: viewRows(q), base: settings.base, momentum: settings.momentum, pressure: settings.pressure };
+  if (style === "cloud") paintCloud(buf, data.points, c, shape);
+  else paintGlyph(buf, data.points, c, { ...shape, ...settings.ink });
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = px;
   const ctx = canvas.getContext("2d");
@@ -181,10 +182,11 @@ async function inkNow() {
   ink.classList.add("busy");
   const t0 = performance.now();
   try {
-    if (isBrush()) {
+    if (isPainted()) {
       const px = Math.round(ink.clientWidth * Math.min(2, devicePixelRatio || 1));
       ink.replaceChildren(brushCanvas(px));
-      status.textContent = `ink, brush (${STYLE_NAMES[state.style] ?? "custom"}) · ${Math.round(performance.now() - t0)} ms`;
+      const what = state.style === "cloud" ? "point cloud" : `brush (${STYLE_NAMES[state.style] ?? "custom"})`;
+      status.textContent = `${what} · ${Math.round(performance.now() - t0)} ms`;
     } else {
       const style = withBrush(withView(glassStyle, viewMatrix(camera.quaternion).elements), state);
       ink.replaceChildren(await penroseSVG(cycle(), style));
@@ -213,7 +215,7 @@ function thumbnail(el, c, quaternion = DEFAULT_VIEW, brush = BRUSH, look = { sty
   thumbQueue.push(async () => {
     if (look.style !== "glass") {
       const px = Math.round(el.clientWidth * Math.min(2, devicePixelRatio || 1)) || 240;
-      el.replaceChildren(brushCanvas(px, c, quaternion, { ...brush, ink: look.ink ?? INK_DEFAULT }));
+      el.replaceChildren(brushCanvas(px, c, quaternion, { ...brush, ink: look.ink ?? INK_DEFAULT }, look.style));
       return;
     }
     const style = withBrush(withView(glassStyle, viewMatrix(quaternion).elements), brush);
@@ -234,7 +236,7 @@ async function drainThumbs() {
 //   ?loop=B4 | ?loop=3192a56c487b   &view=qx,qy,qz,qw   &brush=weight,momentum,pressure
 //   &style=glass|wet|fluent|dry|big|formal|custom   &ink=ink,dryness,splatter,grit (brush styles)
 
-const STYLE_NAMES = { glass: "glass", wet: "wet", fluent: "fluent", dry: "dry", big: "big brush", formal: "formal" };
+const STYLE_NAMES = { glass: "glass", wet: "wet", fluent: "fluent", dry: "dry", big: "big brush", formal: "formal", cloud: "cloud" };
 
 function stateParams() {
   const q = camera.quaternion;
@@ -243,8 +245,8 @@ function stateParams() {
     view: [q.x, q.y, q.z, q.w].map((v) => +v.toFixed(4)).join(","),
     brush: [state.base, state.momentum, state.pressure].map((v) => +v.toFixed(2)).join(","),
   };
+  if (isPainted()) params.style = state.style;
   if (isBrush()) {
-    params.style = state.style;
     params.ink = [state.ink.ink, state.ink.dryness, state.ink.splatter, state.ink.grit].map((v) => +v.toFixed(2)).join(",");
   }
   return params;
@@ -347,7 +349,7 @@ for (const b of document.querySelectorAll("[data-style]")) {
   b.addEventListener("click", () => {
     const name = b.dataset.style;
     state.style = name;
-    if (name !== "glass") {
+    if (name !== "glass" && name !== "cloud") {
       const preset = BRUSHES[name];
       state.ink = { ...INK_DEFAULT, ...pick(preset, INK_KEYS) };
       Object.assign(state, BRUSH, pick(preset, ["base", "momentum", "pressure"]));
@@ -378,7 +380,7 @@ const SITE = "coldnebo.github.io/sphere-glyphs";
 /** The credit line along the bottom: what this is, and where it came from. */
 function attribution(ctx, px) {
   const name = loopName();
-  const style = isBrush() ? `brush, ${STYLE_NAMES[state.style] ?? "custom"}` : "glass";
+  const style = state.style === "cloud" ? "point cloud" : isBrush() ? `brush, ${STYLE_NAMES[state.style] ?? "custom"}` : "glass";
   ctx.font = `italic ${Math.round(px * 0.0115)}px "EB Garamond", Georgia, serif`;
   ctx.fillStyle = "rgba(70, 62, 52, 0.55)";
   ctx.textAlign = "center";
@@ -393,7 +395,7 @@ async function saveImage(button) {
   await new Promise((r) => setTimeout(r, 30));   // let the label update before the work
   try {
     let canvas;
-    if (isBrush()) {
+    if (isPainted()) {
       canvas = brushCanvas(SAVE_PX);
     } else {
       const style = withBrush(withView(glassStyle, viewMatrix(camera.quaternion).elements), state);
@@ -413,7 +415,7 @@ async function saveImage(button) {
     const blob = await new Promise((r) => canvas.toBlob(r, "image/png"));
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `sphere-glyph-${loopName()}-${isBrush() ? state.style : "glass"}.png`;
+    a.download = `sphere-glyph-${loopName()}-${state.style}.png`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   } catch (e) {
@@ -477,6 +479,7 @@ for (const r of Object.keys(data.loops)) {
 /** A gallery entry's style and brush ink, if it was saved with a brush. */
 function entryLook({ style, ink: inkParam }) {
   if (!style || style === "glass") return { style: "glass" };
+  if (style === "cloud") return { style: "cloud" };
   const v = (inkParam ?? "").split(",").map(Number);
   const ink = v.length === 4 && v.every(Number.isFinite)
     ? { ink: v[0], dryness: v[1], splatter: v[2], grit: v[3] }
