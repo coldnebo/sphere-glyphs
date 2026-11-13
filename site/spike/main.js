@@ -10,6 +10,7 @@ import {
 } from "../lib/glyph-text.js";
 import { BRUSHES, paintGlyph } from "../lib/brush.js";
 import { paintCloud } from "../lib/cloud.js";
+import { filmMesh, paintFilm } from "../lib/film.js";
 
 const PAPER = 0xf5f0e3;
 const INK = 0x17140f;
@@ -32,8 +33,8 @@ const FAMILY = familyNames(data.loops, data.symmetries);   // canonical code -> 
 // `style` is "glass" (Penrose) or a brush preset; `ink` holds the brush's own settings.
 const INK_DEFAULT = { ink: 1, dryness: 1, splatter: 1, grit: 0 };
 const state = { root: data.loops.A, family: "A", k: 1, ...BRUSH, style: "glass", ink: { ...INK_DEFAULT } };
-const isBrush = () => state.style !== "glass" && state.style !== "cloud";
-const isPainted = () => state.style !== "glass";       // brush or cloud: drawn on a canvas
+const isBrush = () => !["glass", "cloud", "film"].includes(state.style);
+const isPainted = () => state.style !== "glass";       // brush, cloud or film: drawn on a canvas
 const cycle = () => star(state.root, state.k);
 
 /** Short name for what's on screen: "B4" for a family glyph, else its 12-character code. */
@@ -113,6 +114,32 @@ function buildLoop() {
   const radius = (state.base / 2 / 165) * 0.9;   // glass.style: base px at 165 px per unit
   loopMesh = new THREE.Mesh(new THREE.TubeGeometry(path, 30 * N, radius, 8, true), loopMat);
   scene.add(loopMesh);
+  buildFilm();
+}
+
+// The soap film, shown in the 3D view when the film style is chosen: translucent, so the loop
+// and the sphere stay visible through it. The shaded render comes on release, as for every style.
+const filmMat = new THREE.MeshLambertMaterial({
+  color: 0xb89a74, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false,
+});
+scene.add(new THREE.AmbientLight(0xffffff, 1.6));
+const filmLight = new THREE.DirectionalLight(0xffffff, 1.4);
+scene.add(filmLight);
+let filmMesh3d = null;
+function buildFilm() {
+  if (filmMesh3d) {
+    scene.remove(filmMesh3d);
+    filmMesh3d.geometry.dispose();
+    filmMesh3d = null;
+  }
+  if (state.style !== "film") return;
+  const { pos, tris } = filmMesh(data.points, cycle(), { momentum: state.momentum, pressure: state.pressure });
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(Float32Array.from(pos), 3));
+  geo.setIndex(tris.flat());
+  geo.computeVertexNormals();
+  filmMesh3d = new THREE.Mesh(geo, filmMat);
+  scene.add(filmMesh3d);
 }
 
 function resize() {
@@ -125,6 +152,8 @@ new ResizeObserver(resize).observe(host);
 renderer.setAnimationLoop(() => {
   controls.update();
   rim.quaternion.copy(camera.quaternion);
+  // light the film from over the viewer's shoulder, wherever the view has turned
+  filmLight.position.copy(camera.position).addScaledVector(camera.up, 2);
   renderer.render(scene, camera);
 });
 
@@ -161,6 +190,7 @@ function brushCanvas(px, c = cycle(), q = camera.quaternion, settings = state, s
   const buf = { w: px, h: px, rgb: new Float32Array(px * px * 3) };
   const shape = { size: px, view: viewRows(q), base: settings.base, momentum: settings.momentum, pressure: settings.pressure };
   if (style === "cloud") paintCloud(buf, data.points, c, shape);
+  else if (style === "film") paintFilm(buf, data.points, c, shape);
   else paintGlyph(buf, data.points, c, { ...shape, ...settings.ink });
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = px;
@@ -185,7 +215,7 @@ async function inkNow() {
     if (isPainted()) {
       const px = Math.round(ink.clientWidth * Math.min(2, devicePixelRatio || 1));
       ink.replaceChildren(brushCanvas(px));
-      const what = state.style === "cloud" ? "point cloud" : `brush (${STYLE_NAMES[state.style] ?? "custom"})`;
+      const what = { cloud: "point cloud", film: "soap film" }[state.style] ?? `brush (${STYLE_NAMES[state.style] ?? "custom"})`;
       status.textContent = `${what} · ${Math.round(performance.now() - t0)} ms`;
     } else {
       const style = withBrush(withView(glassStyle, viewMatrix(camera.quaternion).elements), state);
@@ -236,7 +266,7 @@ async function drainThumbs() {
 //   ?loop=B4 | ?loop=3192a56c487b   &view=qx,qy,qz,qw   &brush=weight,momentum,pressure
 //   &style=glass|wet|fluent|dry|big|formal|custom   &ink=ink,dryness,splatter,grit (brush styles)
 
-const STYLE_NAMES = { glass: "glass", wet: "wet", fluent: "fluent", dry: "dry", big: "big brush", formal: "formal", cloud: "cloud" };
+const STYLE_NAMES = { glass: "glass", wet: "wet", fluent: "fluent", dry: "dry", big: "big brush", formal: "formal", cloud: "cloud", film: "film" };
 
 function stateParams() {
   const q = camera.quaternion;
@@ -349,7 +379,7 @@ for (const b of document.querySelectorAll("[data-style]")) {
   b.addEventListener("click", () => {
     const name = b.dataset.style;
     state.style = name;
-    if (name !== "glass" && name !== "cloud") {
+    if (!["glass", "cloud", "film"].includes(name)) {
       const preset = BRUSHES[name];
       state.ink = { ...INK_DEFAULT, ...pick(preset, INK_KEYS) };
       Object.assign(state, BRUSH, pick(preset, ["base", "momentum", "pressure"]));
@@ -380,7 +410,7 @@ const SITE = "coldnebo.github.io/sphere-glyphs";
 /** The credit line along the bottom: what this is, and where it came from. */
 function attribution(ctx, px) {
   const name = loopName();
-  const style = state.style === "cloud" ? "point cloud" : isBrush() ? `brush, ${STYLE_NAMES[state.style] ?? "custom"}` : "glass";
+  const style = state.style === "cloud" ? "point cloud" : state.style === "film" ? "soap film" : isBrush() ? `brush, ${STYLE_NAMES[state.style] ?? "custom"}` : "glass";
   ctx.font = `italic ${Math.round(px * 0.0115)}px "EB Garamond", Georgia, serif`;
   ctx.fillStyle = "rgba(70, 62, 52, 0.55)";
   ctx.textAlign = "center";
@@ -479,7 +509,7 @@ for (const r of Object.keys(data.loops)) {
 /** A gallery entry's style and brush ink, if it was saved with a brush. */
 function entryLook({ style, ink: inkParam }) {
   if (!style || style === "glass") return { style: "glass" };
-  if (style === "cloud") return { style: "cloud" };
+  if (style === "cloud" || style === "film") return { style };
   const v = (inkParam ?? "").split(",").map(Number);
   const ink = v.length === 4 && v.every(Number.isFinite)
     ? { ink: v[0], dryness: v[1], splatter: v[2], grit: v[3] }
