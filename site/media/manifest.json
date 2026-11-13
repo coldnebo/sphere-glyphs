@@ -1,4 +1,20 @@
 {
+ "Bubbles-7.jpg": {
+  "file": "bubbles-7-9cbwkk.webp",
+  "kind": "commons",
+  "width": 2000,
+  "height": 1500,
+  "bytes": 366966,
+  "page": "https://commons.wikimedia.org/wiki/File:Bubbles-7.jpg",
+  "licence": "CC0",
+  "artist": "MartinThoma",
+  "credit": "Own work",
+  "original": {
+   "width": 4896,
+   "height": 3672,
+   "bytes": 7593472
+  }
+ },
  "Calligram in the shape of a lion.jpg": {
   "file": "calligram-in-the-shape-of-a-lion-78vowc.webp",
   "kind": "commons",
@@ -29,6 +45,38 @@
    "width": 3893,
    "height": 3459,
    "bytes": 4924300
+  }
+ },
+ "Deutscher Pavillon Expo 67.JPG": {
+  "file": "deutscher-pavillon-expo-67-155niqo.webp",
+  "kind": "commons",
+  "width": 752,
+  "height": 573,
+  "bytes": 44984,
+  "page": "https://commons.wikimedia.org/wiki/File:Deutscher_Pavillon_Expo_67.JPG",
+  "licence": "Public domain",
+  "artist": "Karen Scholz, für die Bundesministerium der Finanzen und die Deutsche Post AG",
+  "credit": "Own work",
+  "original": {
+   "width": 752,
+   "height": 573,
+   "bytes": 82180
+  }
+ },
+ "Film of soap interference 3.jpg": {
+  "file": "film-of-soap-interference-3-1mogxkg.webp",
+  "kind": "commons",
+  "width": 640,
+  "height": 480,
+  "bytes": 24162,
+  "page": "https://commons.wikimedia.org/wiki/File:Film_of_soap_interference_3.jpg",
+  "licence": "Public domain",
+  "artist": "No machine-readable author provided. Patrick.Nordmann~commonswiki assumed (based on copyright claims).",
+  "credit": "No machine-readable source provided. Own work assumed (based on copyright claims).",
+  "original": {
+   "width": 640,
+   "height": 480,
+   "bytes": 50488
   }
  },
  "Folio from the \"Blue Qur'an\" MET DP167100.jpg": {
@@ -109,6 +157,38 @@
    "width": 4513,
    "height": 1480,
    "bytes": 940534
+  }
+ },
+ "PSM V36 D640 Surface tension test of film 1.jpg": {
+  "file": "psm-v36-d640-surface-tension-test-of-film-1-zxh8jd.webp",
+  "kind": "commons",
+  "width": 1721,
+  "height": 477,
+  "bytes": 82000,
+  "page": "https://commons.wikimedia.org/wiki/File:PSM_V36_D640_Surface_tension_test_of_film_1.jpg",
+  "licence": "Public domain",
+  "artist": "Unknown author Unknown author",
+  "credit": "Popular Science Monthly Volume 36",
+  "original": {
+   "width": 1721,
+   "height": 477,
+   "bytes": 112896
+  }
+ },
+ "PSM V36 D642 Surface tension test of film supported on wire frames.jpg": {
+  "file": "psm-v36-d642-surface-tension-test-of-film-supported-on-wire--1xm9tw2.webp",
+  "kind": "commons",
+  "width": 1088,
+  "height": 756,
+  "bytes": 100000,
+  "page": "https://commons.wikimedia.org/wiki/File:PSM_V36_D642_Surface_tension_test_of_film_supported_on_wire_frames.jpg",
+  "licence": "Public domain",
+  "artist": "Unknown author Unknown author",
+  "credit": "Popular Science Monthly Volume 36",
+  "original": {
+   "width": 1088,
+   "height": 756,
+   "bytes": 128608
   }
  },
  "Songhuizong5.jpg": {

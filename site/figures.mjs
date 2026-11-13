@@ -9,6 +9,8 @@ import {
 import { Library } from "./lib/library.js";
 import sharp from "sharp";
 import { calabiYau, calabiYauFamily, harmonics, orbitals } from "./science.mjs";
+import { Raster } from "./raster.mjs";
+import { paintFilm } from "./lib/film.js";
 
 const DOMAIN = readFileSync("penrose/tammes-glyph.domain", "utf8");
 const GLASS = readFileSync("penrose/styles/glass.style", "utf8");
@@ -328,6 +330,33 @@ async function rasterAsSVG({ data: webp, width, height }) {
     `<image href="data:image/png;base64,${png.toString("base64")}" width="${width}" height="${height}"/></svg>`;
 }
 
+// ---------------------------------------------------------------- soap films
+
+const FILM_LOOK = { opacity: 0.45, iridescence: 0.5 };   // the explorer's defaults
+async function filmImage(loop, size) {
+  const img = new Raster(size, size);
+  paintFilm(img, data.points, loop, { size: img.w, ...FILM_LOOK });
+  return img.webp(86);
+}
+/** "Films of soap": one loop spanned by its film, large. */
+export const filmcover = () => filmImage(star(data.loops.B, 2), 900);
+/** Three loops' films side by side. */
+export async function filmrow() {
+  const tile = 460, sheet = new Raster(tile * 3, tile);
+  for (const [i, loop] of [star(data.loops.B, 2), star(data.loops.A, 1), star(data.loops.C, 4)].entries()) {
+    const t = new Raster(tile, tile);
+    paintFilm(t, data.points, loop, { size: t.w, ...FILM_LOOK });
+    for (let y = 0; y < t.h; y++) sheet.rgb.set(t.rgb.subarray(y * t.w * 3, (y + 1) * t.w * 3), (y * sheet.w + i * t.w) * 3);
+  }
+  return sheet.webp(86);
+}
+
+CARDS.soap = () => card(
+  filmImage(star(data.loops.B, 2), 700).then(rasterAsSVG),
+  filmImage(star(data.loops.A, 1), 500).then(rasterAsSVG),
+  filmImage(star(data.loops.C, 4), 500).then(rasterAsSVG),
+);
+
 CARDS.unseen = () => card(
   calabiYau({ size: 1000 }).then(rasterAsSVG),
   glyph(star(data.loops.C, 4)),
@@ -336,7 +365,7 @@ CARDS.unseen = () => card(
 
 export const FIGURES = {
   cover, dancers, sphere, bracelet, orientations, symmetric, roadtrips, families, wandering, explore, tools, dial,
-  shadows,
+  shadows, filmcover, filmrow,
   orbitals: () => orbitals(),
   harmonics: () => harmonics(data.points),
   calabiyau: () => calabiYau(),

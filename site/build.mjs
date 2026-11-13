@@ -50,6 +50,7 @@ const ARTICLES = [
   { src: "site/articles/colophon.md", slug: "colophon" },
   { src: "site/articles/inspirations.md", slug: "inspirations" },
   { src: "site/articles/unseen.md", slug: "unseen" },
+  { src: "site/articles/soap.md", slug: "soap" },
 ];
 
 /** "Built on <date> from commit <sha>", for the colophon. */
@@ -171,7 +172,8 @@ async function splitBlock(md, dir) {
     else if (para.trim().startsWith("**Look further:**")) {
       rest.push(`<aside class="further">${marked.parse(para.trim().replace(/^\*\*Look further:\*\*\s*/, ""))
         .replace(/^<p>/, '<p><span class="further-label">Look further</span> ')}</aside>`);
-    } else rest.push(marked.parse(para.replace(/\]\(\.\.\/spike\/\)/g, `](${EXPLORER})`)));
+    // links to the explorer, with or without a glyph in them (../spike/?loop=B2&style=film)
+    } else rest.push(marked.parse(para.replace(/\]\(\.\.\/spike\/([^)]*)\)/g, `](${EXPLORER}$1)`)));
   }
   return [figs, rest.join("\n")];
 }
