@@ -271,7 +271,9 @@ export function paintFilm(buf, points, loop, opts = {}) {
   const look = {
     light, half,
     specular: opts.specular ?? 0.55,          // highlight strength
-    contours: opts.contours ?? 11,            // contour rings across the disc; 0 for none
+    // contour rings across the disc. Off by default: they trace how the film was built (rings
+    // around the disc's centre) rather than its shape, which the highlights already show
+    contours: opts.contours ?? 0,
     grain: opts.grain ?? 1,                   // grain fixed to the surface; 0 for none
     opacity: Math.min(1, Math.max(0.05, opts.opacity ?? 1)),   // 1 opaque; lower is a clearer film
     iridescence: opts.iridescence ?? 0,       // thin-film colours, as on a soap bubble
