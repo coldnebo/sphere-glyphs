@@ -149,12 +149,31 @@ export function filmMesh(points, loop, { rings = 24, m = 240, minimal = 40, ...o
   return { pos, tris, verts, rim, edge, m };
 }
 
-/** A triangle with a colour at each corner, blended across it, into colour and depth buffers. */
-function triangle(buf, zb, a, b, c, ca, cb, cc) {
+/** Smooth value noise in the plane (0..1), for grain fixed to the surface. */
+function noise2(x, y) {
+  const h = (i, j) => {
+    const s = Math.sin(i * 127.1 + j * 311.7) * 43758.5453;
+    return s - Math.floor(s);
+  };
+  const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+  const ex = fx * fx * (3 - 2 * fx), ey = fy * fy * (3 - 2 * fy);
+  const a = h(ix, iy), b = h(ix + 1, iy), c = h(ix, iy + 1), d = h(ix + 1, iy + 1);
+  return (a * (1 - ex) + b * ex) * (1 - ey) + (c * (1 - ex) + d * ex) * ey;
+}
+
+/**
+ * A triangle shaded at every pixel. Each corner carries [screen x, y, depth], a normal, a base
+ * colour and its place on the original disc (dx, dy). Blending the normal across the triangle
+ * lets a sharp highlight slide over the surface as it bends; the disc coordinates fix contour
+ * rings and grain to the film itself, so they crowd and stretch with its folds.
+ */
+function shadeTriangle(buf, zb, P, A, look) {
+  const [a, b, c] = P;
   const area = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
   if (Math.abs(area) < 1e-9) return;
   const x0 = Math.max(0, Math.floor(Math.min(a[0], b[0], c[0]))), x1 = Math.min(buf.w - 1, Math.ceil(Math.max(a[0], b[0], c[0])));
   const y0 = Math.max(0, Math.floor(Math.min(a[1], b[1], c[1]))), y1 = Math.min(buf.h - 1, Math.ceil(Math.max(a[1], b[1], c[1])));
+  const { light, half, specular, contours, grain } = look;
   for (let y = y0; y <= y1; y++) {
     for (let x = x0; x <= x1; x++) {
       const px = x + 0.5, py = y + 0.5;
@@ -165,7 +184,29 @@ function triangle(buf, zb, a, b, c, ca, cb, cc) {
       const z = w0 * a[2] + w1 * b[2] + w2 * c[2], k = y * buf.w + x;
       if (z <= zb[k]) continue;
       zb[k] = z;
-      for (let ch = 0; ch < 3; ch++) buf.rgb[k * 3 + ch] = w0 * ca[ch] + w1 * cb[ch] + w2 * cc[ch];
+      const lerp = (key, i) => w0 * A[0][key][i] + w1 * A[1][key][i] + w2 * A[2][key][i];
+      // the normal, turned to face the viewer (the film is seen from both sides)
+      let nx = lerp("n", 0), ny = lerp("n", 1), nz = lerp("n", 2);
+      const len = Math.hypot(nx, ny, nz) || 1;
+      nx /= len; ny /= len; nz /= len;
+      if (nz < 0) { nx = -nx; ny = -ny; nz = -nz; }
+      const lam = Math.max(0, nx * light[0] + ny * light[1] + nz * light[2]);
+      const spec = specular * Math.max(0, nx * half[0] + ny * half[1] + nz * half[2]) ** 48;
+      const edgeGlow = 0.1 * (1 - nz) ** 2;                    // a little light where it turns away
+      const base = [lerp("c", 0), lerp("c", 1), lerp("c", 2)];
+      // place on the disc: contour rings, and grain
+      const dx = lerp("d", 0), dy = lerp("d", 1), r = Math.hypot(dx, dy);
+      const g = grain > 0 ? 1 + grain * 0.14 * (noise2(dx * 38, dy * 38) + 0.5 * noise2(dx * 97, dy * 97) - 0.75) : 1;
+      let col = base.map((v, i) => (INK[i] + (v - INK[i]) * (0.26 + 0.74 * lam)) * g);
+      if (contours > 0) {
+        const f = r * contours, dist = Math.abs(f - Math.round(f));   // 0 on a ring
+        const line = Math.max(0, 1 - dist / 0.07) * (r > 0.04 && r < 0.985 ? 1 : 0);
+        col = mix(col, INK, 0.45 * line);
+      }
+      col = mix(col, PAPER, Math.min(1, spec + edgeGlow));
+      buf.rgb[k * 3] = col[0];
+      buf.rgb[k * 3 + 1] = col[1];
+      buf.rgb[k * 3 + 2] = col[2];
     }
   }
 }
@@ -207,15 +248,20 @@ export function paintFilm(buf, points, loop, opts = {}) {
     const f = a * m, i = Math.floor(f) % m, t = f - Math.floor(f);
     return mix(around[i], around[(i + 1) % m], t);
   };
-  // the colour at each vertex: its wedge, lit two-sided, with a little sheen
-  const C = verts.map((v, i) => {
-    const nn = N[i], len = Math.hypot(...nn) || 1;
-    const lam = Math.abs((nn[0] * light[0] + nn[1] * light[1] + nn[2] * light[2]) / len);
-    const facing = Math.abs(nn[2] / len);
-    const base = mix(wedge(v.a), PAPER, 0.1 + 0.16 * (1 - v.j / rimRing(verts)));
-    return mix(mix(INK, base, 0.3 + 0.7 * lam), PAPER, 0.24 * lam ** 14 + 0.07 * (1 - facing));
+  // what each vertex carries into the shading: normal, wedge colour, place on the disc
+  const R0 = rimRing(verts);
+  const A = verts.map((v, i) => {
+    const r = v.j / R0, t = 2 * Math.PI * v.a;
+    return { n: N[i], c: mix(wedge(v.a), PAPER, 0.1 + 0.16 * (1 - r)), d: [r * Math.cos(t), r * Math.sin(t)] };
   });
-  for (const [a, b, d] of tris) triangle(buf, zb, S[a], S[b], S[d], C[a], C[b], C[d]);
+  const half = (() => { const h = [light[0], light[1], light[2] + 1], s = Math.hypot(...h); return h.map((x) => x / s); })();
+  const look = {
+    light, half,
+    specular: opts.specular ?? 0.55,          // highlight strength
+    contours: opts.contours ?? 11,            // contour rings across the disc; 0 for none
+    grain: opts.grain ?? 1,                   // grain fixed to the surface; 0 for none
+  };
+  for (const [a, b, d] of tris) shadeTriangle(buf, zb, [S[a], S[b], S[d]], [A[a], A[b], A[d]], look);
 
   // the wire: the loop itself in ink, faint where the film hides it
   const wire = Math.max(0.8, (base / 6.5) * 1.6 * k);

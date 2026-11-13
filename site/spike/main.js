@@ -118,9 +118,11 @@ function buildLoop() {
 }
 
 // The soap film, shown in the 3D view when the film style is chosen: translucent, so the loop
-// and the sphere stay visible through it. The shaded render comes on release, as for every style.
-const filmMat = new THREE.MeshLambertMaterial({
-  color: 0xb89a74, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false,
+// and the sphere stay visible through it, and glossy, so highlights slide over it as it turns and
+// show how it curves. The shaded render comes on release, as for every style.
+const filmMat = new THREE.MeshPhongMaterial({
+  color: 0xb89a74, specular: 0x8a8070, shininess: 55,
+  transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false,
 });
 scene.add(new THREE.AmbientLight(0xffffff, 1.6));
 const filmLight = new THREE.DirectionalLight(0xffffff, 1.4);
