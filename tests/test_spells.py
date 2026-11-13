@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 import spells
+import substance_text
 import tammes
 from conftest import EXAMPLES
 
@@ -60,7 +61,7 @@ def test_antipodal_arcs_route_over_the_north_pole():
 
 
 def test_literals_are_distinct_in_value():
-    assert spells.literals([0.0, -0.0, 0.0, 1.0]) == "0.000000, 0.000001, 0.000002, 1.000000"
+    assert substance_text.literals([0.0, -0.0, 0.0, 1.0]) == "0.000000, 0.000001, 0.000002, 1.000000"
 
 
 def test_spell_data(data):

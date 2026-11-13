@@ -14,6 +14,8 @@ import sys
 
 import numpy as np
 
+from substance_text import at_lines
+
 
 def canonical_order(x):
     """Vertex order: by polar angle (ring), then azimuth within the ring."""
@@ -33,8 +35,7 @@ def substance(x, cycle, k):
     lines = [f"-- spherical star {{{n}/{k}}}: chords through the interior, closed loop", ""]
     lines.append("Vertex " + ", ".join(names))
     lines.append("")
-    for i, (a, b, c) in enumerate(x):
-        lines.append(f"At({names[i]}, {a:.6f}, {b:.6f}, {c:.6f})")
+    lines += at_lines(x)
     lines.append("")
     for a, b in zip(cycle, cycle[1:] + cycle[:1]):
         lines.append(f"Step({names[a]}, {names[b]})")

@@ -73,7 +73,14 @@ The model is a stack of layers. Each layer is a dial between formal and expressi
   then ring by ring by azimuth, and visited in the order i → k·i mod 13. On a circle this
   rule gives {13/k} from the roots of unity, so the project returns to its starting
   question in 3D. Each k from 1 to 6 gives one closed loop; k and 13−k give the same loop
-  reversed. The full space is 13!/(8·2) ≈ 3.9 × 10⁸ glyphs.
+  reversed. Open chord paths number 13!/(8·2) ≈ 3.9 × 10⁸ up to symmetry; closed loops
+  number 12!/(2·8) ≈ 3.0 × 10⁷.
+- **Loops from surface loops** (`loops.py`): the contact graph has only **3 closed
+  Hamiltonian loops** up to symmetry. Each one is itself an ordering of the 13 points, so it
+  can stand in for the roots of unity: stepping by k = 1…6 gives a 3 × 6 table of
+  **18 distinct loop glyphs**. k = 1 is the surface loop, drawn along contact arcs, and each
+  step of k pulls it further into the interior. The star ordering above isn't a surface
+  loop, so its six stars are a separate family.
 
 ### Projections
 

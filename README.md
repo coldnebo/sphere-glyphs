@@ -46,6 +46,7 @@ src/              pipeline
   tammes.py         solve Tammes(N) numerically, extract the contact graph
   glyphs.py         orient the sphere, enumerate Hamiltonian paths, dedupe by symmetry -> Substances
   stars.py          spherical star loops i -> k*i mod 13 -> Substances
+  loops.py          the 3 closed surface loops x star steps k = 1..6 -> 18 loop glyphs
   spells.py         spell-book circles -> the 11-point sphere (icosahedron minus one) -> Substances
   render.mjs        render one Domain/Substance/Style trio to SVG or PNG
   sheet.mjs         tile many renders into a contact sheet
@@ -60,6 +61,7 @@ examples/         generated data, see examples/README.md
   tammes13.json     the 13-point optimum
   glyphs/           24 sample surface glyphs + glyphs.json (all 199)
   stars/            the six {13/k} star loops
+  loops/            18 loop glyphs: 3 surface loops x k = 1..6
   spells/           5 spells from The Spell Writing Guide (Gorilla of Destiny), as 11-point sphere glyphs
 docs/             DESIGN.md, DEVELOPMENT.md, images/
 tests/            pytest + node:test

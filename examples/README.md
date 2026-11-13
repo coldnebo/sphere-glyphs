@@ -13,12 +13,13 @@ scripts/dev.sh node src/render.mjs penrose/tammes-glyph.domain <substance> penro
 | `glyphs/glyph-NNNN.substance` | `src/glyphs.py examples/tammes13.json examples/glyphs 24` | 24 of the 199 surface glyphs, a seeded random sample. `NNNN` is the glyph's index in the canonical list |
 | `glyphs/glyphs.json` | same | the oriented points, the edges, and all 199 canonical paths |
 | `stars/star-13-k.substance` | `src/stars.py examples/glyphs/glyphs.json examples/stars` | the closed chord loops i → k·i mod 13, for k = 1…6 |
+| `loops/loop-R-kK.substance` | `src/loops.py examples/glyphs/glyphs.json examples/loops` | the 3 closed surface loops (rows A–C) and the star loops they generate, k = 1…6. k = 1 is the surface loop itself |
 | `spells/spells.json` | extracted from the spell book sample | 5 spells: name, attributes, and edges between 11 points on a circle |
 | `spells/<spell>.substance` | `src/spells.py examples/spells/spells.json examples/spells` | each spell on the 11-point sphere, as `Link` arcs |
 
 The surface glyphs (`Start`, `End` and `Step` along `Contact` edges) are made for the **seal**
 and **brush** styles, and also work in **glass**. The star loops have no `Contact` edges and
-travel through the interior, so they are meant for **glass**.
+travel through the interior, so they are meant for **glass**. The same goes for the loops.
 
 ### Spells
 
