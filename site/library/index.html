@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Library</title>
+  <meta name="description" content="Every one of the 29,940,480 loop glyphs, each exactly once, on one endless wall.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap">
+  <link rel="stylesheet" href="library.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="title">
+      <p class="back"><a href="../">Sphere glyphs</a></p>
+      <h1>The Library</h1>
+      <p class="sub">Every one of the <strong id="total">29,940,480</strong> glyphs, each exactly once.</p>
+    </div>
+    <div class="where">
+      <p class="position" aria-live="polite"><span class="label">No.</span> <span id="position">1</span></p>
+      <div class="actions">
+        <button id="random" type="button">Somewhere else</button>
+        <form id="goto">
+          <label><span class="label">go to No.</span> <input id="gotoN" inputmode="numeric" autocomplete="off" placeholder="1 – 29,940,480"></label>
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <main id="wall" class="wall" tabindex="0" aria-label="The wall of glyphs. Scroll, or use the arrow and page keys."></main>
+
+  <div class="track" id="track" aria-hidden="true"><div class="thumb" id="thumb"></div></div>
+  <p class="hint">Scroll to browse · click a glyph to open it in the explorer</p>
+
+  <script type="module" src="wall.js"></script>
+</body>
+</html>

@@ -7,11 +7,12 @@
 //   ## Heading                                            -> one spread; its fig: images are the plate
 //   **Look further:** ...                                 -> a breakout panel
 //   text[^key]  /  [^key]: citation (under ## Sources)    -> numbered citations and the sources list
-import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { execSync } from "node:child_process";
 import { marked } from "marked";
-import { CARDS, FIGURES } from "./figures.mjs";
+import { CARDS, FIGURES, libraryDoor } from "./figures.mjs";
 import { writeImage } from "../src/penrose.mjs";
 
 // _site/ is self-contained and uses only relative links, so it works at any path:
@@ -42,7 +43,25 @@ async function social({ path, title, description, card, type = "website" }) {
     .concat(`<link rel="canonical" href="${SITE_URL + path}">`)
     .join("\n  ");
 }
-const ARTICLES = [{ src: "site/articles/permutations.md", slug: "loops" }];
+const ARTICLES = [
+  { src: "site/articles/permutations.md", slug: "loops" },
+  { src: "site/articles/colophon.md", slug: "colophon" },
+];
+
+/** "Built on <date> from commit <sha>", for the colophon. */
+function buildStamp() {
+  let sha = process.env.GITHUB_SHA ?? "";
+  if (!sha) {
+    try {
+      sha = execSync("git rev-parse HEAD", { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+    } catch { /* not a git checkout, or git refuses the mount */ }
+  }
+  const date = new Date().toISOString().slice(0, 10);
+  const commit = sha
+    ? `from commit [${sha.slice(0, 7)}](https://github.com/coldnebo/sphere-glyphs/commit/${sha})`
+    : "from a local working copy";
+  return `*This copy was built on ${date} ${commit}.*`;
+}
 
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
 const inline = (md) => marked.parseInline(md);
@@ -129,7 +148,7 @@ async function buildArticle({ src, slug }) {
   mkdirSync(join(dir, "figures"), { recursive: true });
   console.log(`article ${src} -> ${dir}/`);
 
-  const [meta, raw] = frontMatter(readFileSync(src, "utf8"));
+  const [meta, raw] = frontMatter(readFileSync(src, "utf8").replace("{{build}}", buildStamp()));
   const [body, cited, further] = citations(raw.replace(/^## Sources\s*$/m, ""));
   const [coverMd, secs] = sections(body);
 
@@ -211,12 +230,29 @@ async function buildExplorer() {
   for (const f of ["style.css", "data.json", "gallery.json"]) copyTo(join(dir, f), join("site/spike", f));
   copyTo(join(dir, "penrose/tammes-glyph.domain"), "penrose/tammes-glyph.domain");
   copyTo(join(dir, "penrose/styles/glass.style"), "penrose/styles/glass.style");
-  copyTo(join(OUT, "lib/glyph-text.js"), "site/lib/glyph-text.js");
+  for (const f of readdirSync("site/lib")) copyTo(join(OUT, "lib", f), join("site/lib", f));
 
   const vendor = join(OUT, "vendor");
   copyTo(join(vendor, "three.module.js"), pkg("three"));
   copyTo(join(vendor, "three-addons/controls/TrackballControls.js"), pkg("three/addons/controls/TrackballControls.js"));
   copyTo(join(vendor, "penrose-core.js"), join(dirname(pkg("@penrose/core")), "bundle/index.js"));
+}
+
+async function buildLibrary() {
+  console.log(`library site/library -> ${OUT}/library/`);
+  const dir = join(OUT, "library");
+  const tags = await social({
+    path: "library/", title: "The Library",
+    description: "Every one of the 29,940,480 loop glyphs, each exactly once, on one endless wall.",
+    card: "library",
+  });
+  copyTo(join(dir, "index.html"), "site/library/index.html", (html) =>
+    html.replace("<title>The Library</title>", `<title>The Library</title>\n  ${tags}`));
+  copyTo(join(dir, "wall.js"), "site/library/wall.js", (js) =>
+    js.replace('"../spike/data.json"', '"./data.json"').replace('const EXPLORER = "../spike/"', 'const EXPLORER = "../explorer/"'));
+  for (const f of ["library.css", "index.bin"]) copyTo(join(dir, f), join("site/library", f));
+  copyTo(join(dir, "data.json"), "site/spike/data.json");
+  writeFileSync(join(dir, "door.svg"), await libraryDoor());
 }
 
 async function buildHome() {
@@ -233,5 +269,6 @@ async function buildHome() {
 rmSync(OUT, { recursive: true, force: true });
 for (const a of ARTICLES) await buildArticle(a);
 await buildExplorer();
+await buildLibrary();
 await buildHome();
 console.log(`done: ${OUT}/`);

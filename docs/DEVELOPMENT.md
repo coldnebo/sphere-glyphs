@@ -143,3 +143,20 @@ One-time setup: **Settings → Pages → Build and deployment → Source: GitHub
 Each page has Open Graph and Twitter tags, plus a 1200 × 630 preview card rendered at build time
 (`CARDS` in `site/figures.mjs`, written to `_site/social/`). Link previews need absolute URLs.
 They default to the Pages address; set `SITE_URL` to build for a fork or a custom domain.
+
+## The Library
+
+`site/library/` is a wall of every loop glyph, each exactly once (`site/lib/library.js`):
+
+- **Orderings:** an ordering is point 0 followed by the other 12 points; there are 12! of them,
+  numbered by Lehmer code. Each glyph has exactly one canonical ordering among its 16.
+- **Wall order:** wall position p shows ordering `shuffle(p)`, a Feistel permutation, so the
+  order looks random but is fixed. Positions whose ordering is not canonical are skipped.
+- **The index:** `site/library/index.bin` stores the number of canonical orderings in each
+  block of 4096 positions, so glyph n is a binary search plus one ~2 ms block scan.
+  Rebuild it with `node site/library/build-index.mjs` (about 25 s on 16 threads). The build
+  scans all 479,001,600 orderings and fails unless the total equals the Burnside count,
+  29,940,480. Changing `KEY` reshuffles the wall and requires a rebuild.
+- **Drawing:** `site/lib/sketch.js` draws glyphs on canvas with the glass brush model, at about
+  1 ms per glyph. Clicking a glyph opens it in the explorer for the Penrose ink.
+- **Addresses:** `library/#12345678` opens the wall at glyph No. 12,345,678.

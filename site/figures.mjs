@@ -6,6 +6,7 @@ import { composeSheet, renderText } from "../src/penrose.mjs";
 import {
   loopSubstance, withView, withBrush, star, decodeLoop, mutateLoop,
 } from "./lib/glyph-text.js";
+import { Library } from "./lib/library.js";
 
 const DOMAIN = readFileSync("penrose/tammes-glyph.domain", "utf8");
 const GLASS = readFileSync("penrose/styles/glass.style", "utf8");
@@ -210,6 +211,18 @@ export async function wandering() {
   return sheet(steps, { cols: 5, cell: 240, captions: steps.map((_, i) => (i ? `step ${i}` : "A3")) });
 }
 
+/** The colophon: one loop (B3), inked three ways. */
+export async function tools() {
+  const g = star(data.loops.B, 3);
+  const brushes = [
+    { base: 5, momentum: 0.15, pressure: 0.4 },
+    { base: 6.5, momentum: 1, pressure: 1 },
+    { base: 11, momentum: 1, pressure: 2.2 },
+  ];
+  const svgs = await Promise.all(brushes.map((brush) => glyph(g, { brush })));
+  return composeSheet(svgs, { cols: 3, cell: 340, background: null, captions: ["formal", "as drawn", "heavy"] });
+}
+
 /** For the explorer section: a glyph from the gallery. */
 export async function explore() {
   return glyph(decodeLoop("72b491c53a68"), { brush: { base: 6.5, momentum: 0.6, pressure: 1 } });
@@ -245,8 +258,29 @@ export const CARDS = {
     glyph(decodeLoop("72b491c53a68"), { brush: { base: 6.5, momentum: 0.6, pressure: 1 } }),
     glyph(star(data.loops.C, 4), { brush: { base: 11, momentum: 1, pressure: 2.2 } }),
   ),
+  colophon: () => card(
+    glyph(star(data.loops.B, 3)),
+    glyph(star(data.loops.B, 3), { brush: { base: 5, momentum: 0.15, pressure: 0.4 } }),
+    glyph(star(data.loops.B, 3), { brush: { base: 11, momentum: 1, pressure: 2.2 } }),
+  ),
+  // the first three glyphs on the Library wall, in ink
+  library: () => {
+    const lib = libraryIndex();
+    return card(glyph(lib.glyph(0).loop), glyph(lib.glyph(1).loop), glyph(lib.glyph(2).loop));
+  },
 };
 
+function libraryIndex() {
+  const counts = new Uint16Array(readFileSync("site/library/index.bin").buffer.slice(0));
+  return new Library(counts, data.symmetries);
+}
+
+/** The home page's door to the Library: the wall's first four glyphs, 2 x 2. */
+export async function libraryDoor() {
+  const lib = libraryIndex();
+  return sheet([0, 1, 2, 3].map((n) => lib.glyph(n).loop), { cols: 2, cell: 300 });
+}
+
 export const FIGURES = {
-  cover, dancers, sphere, bracelet, orientations, symmetric, roadtrips, families, wandering, explore,
+  cover, dancers, sphere, bracelet, orientations, symmetric, roadtrips, families, wandering, explore, tools,
 };

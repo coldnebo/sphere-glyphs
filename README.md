@@ -1,6 +1,6 @@
 # sphere-glyphs
 
-**Site:** <https://coldnebo.github.io/sphere-glyphs/>: the visual essay *Thirty million loops* and the interactive explorer.
+**Site:** <https://coldnebo.github.io/sphere-glyphs/>: the visual essay *Thirty million loops*, the interactive explorer, and the Library of all 29,940,480 glyphs.
 
 A generative writing system built from the best possible arrangement of 13 points on a sphere.
 Each glyph is a path through those points. It is projected onto the page and drawn with a brush
@@ -50,6 +50,7 @@ src/              pipeline
   stars.py          spherical star loops i -> k*i mod 13 -> Substances
   loops.py          the 3 closed surface loops x star steps k = 1..6 -> 18 loop glyphs
   burnside.py       exact count of distinct loop glyphs: 29,940,480
+site/              the GitHub Pages site: articles, explorer (spike/), the Library (library/), build.mjs
   spells.py         spell-book circles -> the 11-point sphere (icosahedron minus one) -> Substances
   render.mjs        render one Domain/Substance/Style trio to SVG or PNG
   sheet.mjs         tile many renders into a contact sheet

@@ -1,0 +1,95 @@
+:root {
+  --page: #faf7ef;
+  --paper: #f5f0e3;
+  --text: #2a251e;
+  --muted: #6f6556;
+  --rule: #ddd4c1;
+  --accent: #8a4b2a;
+  --bar: color-mix(in srgb, var(--page) 88%, transparent);
+  --display: "Cormorant Garamond", "EB Garamond", Georgia, serif;
+  --body: "EB Garamond", Georgia, "DejaVu Serif", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #141311; --text: #e6dfd0; --muted: #a59b89; --rule: #34302a; --accent: #d39a74;
+  }
+}
+:root[data-theme="dark"] { --page: #141311; --text: #e6dfd0; --muted: #a59b89; --rule: #34302a; --accent: #d39a74; }
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; overflow: hidden; background: var(--page); color: var(--text);
+  font: 400 1.05rem/1.5 var(--body); -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+
+/* ------------------------------------------------------------ the bar */
+
+.bar {
+  position: fixed; inset: 0 0 auto 0; z-index: 5;
+  display: flex; justify-content: space-between; align-items: flex-end; gap: 16px 32px; flex-wrap: wrap;
+  padding: 18px 56px 14px 28px;
+  background: var(--bar); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+}
+.back { margin: 0 0 4px; font-size: 0.85rem; color: var(--muted); }
+h1 { font: 400 2.2rem/1 var(--display); margin: 0; }
+.sub { margin: 4px 0 0; color: var(--muted); font-size: 0.98rem; }
+.sub strong { font-weight: 500; color: var(--text); font-variant-numeric: lining-nums; }
+.where { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.position { margin: 0; font: 400 1.7rem/1 var(--display); font-variant-numeric: lining-nums tabular-nums; }
+.label { font: 500 0.72rem/1 var(--body); letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); }
+.actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
+button, input {
+  font: inherit; color: var(--text); background: transparent;
+  border: 1px solid var(--rule); border-radius: 4px; padding: 3px 12px;
+}
+button { cursor: pointer; }
+button:hover { border-color: var(--accent); color: var(--accent); }
+input { width: 11ch; font-variant-numeric: lining-nums; }
+input:focus, button:focus-visible, .wall:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: 2px; }
+
+/* ------------------------------------------------------------ the wall */
+
+.wall { position: fixed; inset: 0; overflow: hidden; touch-action: none; outline: none; }
+.row { position: absolute; left: 0; display: grid; will-change: transform; }
+.tile {
+  display: flex; flex-direction: column; align-items: center; text-decoration: none;
+  padding: 6px; border-radius: 4px; transition: background 0.2s;
+}
+.tile:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.tile canvas { width: 100%; aspect-ratio: 1; display: block; border-radius: 3px; background: var(--paper); }
+.tile span {
+  margin-top: 3px; font-size: 0.78rem; color: var(--muted);
+  font-variant-numeric: lining-nums tabular-nums; white-space: nowrap;
+}
+.tile.flash canvas { box-shadow: 0 0 0 2px var(--accent); }
+
+/* ------------------------------------------------------------ the scrollbar: the whole library */
+
+.track {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 28px; z-index: 6;
+  cursor: pointer; touch-action: none;
+}
+.track::before { content: ""; position: absolute; top: 10px; bottom: 10px; left: 13px; width: 2px; background: var(--rule); border-radius: 1px; }
+.thumb {
+  position: absolute; left: 8px; width: 12px; height: 36px; border-radius: 6px;
+  background: var(--accent); opacity: 0.75; cursor: grab;
+}
+.thumb:active { cursor: grabbing; opacity: 1; }
+
+.hint {
+  position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 5; margin: 0;
+  padding: 4px 14px; border-radius: 20px; font-size: 0.85rem; color: var(--muted);
+  background: var(--bar); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  transition: opacity 1s;
+}
+.hint.gone { opacity: 0; pointer-events: none; }
+
+@media (max-width: 640px) {
+  .bar { padding: 12px 40px 10px 16px; }
+  h1 { font-size: 1.7rem; }
+  .sub { display: none; }
+  .position { font-size: 1.3rem; }
+}

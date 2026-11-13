@@ -101,7 +101,7 @@ strong { font-weight: 500; }
 }
 .spread.flip { grid-template-columns: minmax(300px, 1fr) minmax(0, 1.6fr); padding: 10vh 7vw 10vh 8vw; }
 .spread.flip .plates { order: 2; }
-.spread.text-only { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+.spread.text-only { grid-template-columns: minmax(0, 1fr); justify-items: center; min-height: auto; padding-block: 9vh; }
 .spread.text-only .words { max-width: 44ch; }
 
 .plates { display: flex; flex-direction: column; gap: 4vh; min-width: 0; }

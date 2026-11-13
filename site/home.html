@@ -15,7 +15,7 @@
     .home { min-height: 100svh; padding: 10vh 7vw 8vh; display: flex; flex-direction: column; justify-content: center; }
     .home h1 { font: 400 clamp(3.4rem, 9vw, 8.5rem)/0.9 var(--display); letter-spacing: -0.02em; margin: 0 0 1.6rem; }
     .home .intro { font-size: 1.3rem; max-width: 46ch; margin: 0 0 6vh; }
-    .doors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4vw; }
+    .doors { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3.5vw; }
     .door { text-decoration: none; display: block; }
     .door img {
       display: block; width: 100%; aspect-ratio: 1; object-fit: contain; background: var(--paper);
@@ -55,10 +55,15 @@
         <h2>The explorer</h2>
         <p>Turn a loop in 3D and ink it. Roll a random one, mutate it, and share what you find.</p>
       </a>
+      <a class="door" href="library/">
+        <img src="library/door.svg" alt="Four glyphs from the Library wall">
+        <h2>The Library</h2>
+        <p>Every one of the 29,940,480 glyphs, each exactly once, on one endless wall.</p>
+      </a>
     </div>
   </main>
   <footer>
-    <p><a href="https://github.com/coldnebo/sphere-glyphs">Source on GitHub</a></p>
+    <p><a href="https://github.com/coldnebo/sphere-glyphs">Source on GitHub</a> · <a href="colophon/">Colophon</a></p>
   </footer>
 </body>
 </html>
