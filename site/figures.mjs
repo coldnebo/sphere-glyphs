@@ -263,6 +263,12 @@ export const CARDS = {
     glyph(star(data.loops.B, 3), { brush: { base: 5, momentum: 0.15, pressure: 0.4 } }),
     glyph(star(data.loops.B, 3), { brush: { base: 11, momentum: 1, pressure: 2.2 } }),
   ),
+  // one loop from formal to free, the range of the calligraphy in the article
+  inspirations: () => card(
+    glyph(star(data.loops.A, 3), { brush: { base: 5, momentum: 0.15, pressure: 0.4 } }),
+    glyph(star(data.loops.A, 3), { brush: { base: 11, momentum: 1, pressure: 2.2 } }),
+    glyph(star(data.loops.A, 3)),
+  ),
   // the first three glyphs on the Library wall, in ink
   library: () => {
     const lib = libraryIndex();

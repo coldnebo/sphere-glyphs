@@ -46,6 +46,7 @@ async function social({ path, title, description, card, type = "website" }) {
 const ARTICLES = [
   { src: "site/articles/permutations.md", slug: "loops" },
   { src: "site/articles/colophon.md", slug: "colophon" },
+  { src: "site/articles/inspirations.md", slug: "inspirations" },
 ];
 
 /** "Built on <date> from commit <sha>", for the colophon. */
@@ -127,13 +128,31 @@ async function figure(name, caption, dir) {
   return `<figure class="plate fig-${name}">${media}<figcaption>${inline(caption)}</figcaption></figure>`;
 }
 
-/** Pull fig: images out of a block of Markdown, render the rest. */
+/**
+ * A plate from Wikimedia Commons, by file name: ![caption](commons:File name.jpg).
+ * scroll: instead of commons: lays a long handscroll out at reading height, to be scrolled sideways.
+ * The image is served by Commons at a fixed width; the plate links to the file page, which holds
+ * the full licence and provenance.
+ */
+function commonsPlate(kind, file, caption) {
+  const name = encodeURIComponent(file.trim().replace(/ /g, "_"));
+  // Commons caps thumbnails at 3840px wide, too short for a handscroll: those load the original
+  const src = `https://commons.wikimedia.org/wiki/Special:FilePath/${name}` + (kind === "scroll" ? "" : "?width=1600");
+  const page = `https://commons.wikimedia.org/wiki/File:${name}`;
+  return `<figure class="plate ${kind === "scroll" ? "handscroll" : "photo"}">` +
+    `<a class="art-link" href="${page}"><img class="art" src="${src}" alt="${esc(caption.replace(/[*_[\]]|\(.*?\)/g, ""))}" loading="lazy" decoding="async"></a>` +
+    `<figcaption>${inline(caption)}</figcaption></figure>`;
+}
+
+/** Pull fig: and commons: images out of a block of Markdown, render the rest. */
 async function splitBlock(md, dir) {
   const figs = [];
   const rest = [];
   for (const para of md.split(/\n{2,}/)) {
     const m = /^!\[([^\]]*)\]\(fig:([\w-]+)\)\s*$/.exec(para.trim());
+    const c = /^!\[([^\]]*)\]\((commons|scroll):([^)]+(?:\([^)]*\)[^)]*)*)\)\s*$/.exec(para.trim());
     if (m) figs.push(await figure(m[2], m[1], dir));
+    else if (c) figs.push(commonsPlate(c[2], c[3], c[1]));
     else if (para.trim() === "---") continue;
     else if (para.trim().startsWith("**Look further:**")) {
       rest.push(`<aside class="further">${marked.parse(para.trim().replace(/^\*\*Look further:\*\*\s*/, ""))

@@ -118,6 +118,19 @@ strong { font-weight: 500; }
 }
 .spread.flip .plate figcaption { margin-left: auto; text-align: right; }
 
+/* photographs from open-access collections: the picture is the paper */
+.plate.photo .art { padding: 0; background: #1d1a16; }
+.plate .art-link { display: block; }
+/* handscrolls: unrolled at reading height, scrolled sideways like the real thing */
+.plate.handscroll .art-link {
+  overflow-x: auto; overscroll-behavior-x: contain; border-radius: 3px; box-shadow: var(--shadow);
+  background: var(--paper);
+}
+.plate.handscroll .art {
+  width: auto; max-width: none; height: min(46vh, 480px); max-height: none;
+  padding: 0; box-shadow: none; border-radius: 0;
+}
+
 /* hand-drawn figures: text inside the SVG */
 .plate svg .label { font: italic 400 19px var(--body); fill: #6a5f50; }
 .plate svg .bead { font: 500 10.5px var(--body); fill: var(--ink); }
