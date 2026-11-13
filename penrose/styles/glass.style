@@ -18,10 +18,30 @@ canvas {
 
 global {
   scale = 165.0
+  -- view:begin
+  -- The view rotation R = Rx(tilt) * Rz(spin): spin about the symmetry axis, then tilt it
+  -- toward the viewer. Pages that need an arbitrary rotation replace this whole block
+  -- with explicit r00..r22 values (see site/spike/main.js).
   tilt = 0.52                    -- radians; try 0.0 (axis-on) through 1.2
+  spin = 0.0
+  r00 = cos(spin)
+  r01 = 0.0 - sin(spin)
+  r02 = 0.0
+  r10 = cos(tilt) * sin(spin)
+  r11 = cos(tilt) * cos(spin)
+  r12 = 0.0 - sin(tilt)
+  r20 = sin(tilt) * sin(spin)
+  r21 = sin(tilt) * cos(spin)
+  r22 = cos(tilt)
+  -- view:end
   paper = rgba(0.96, 0.94, 0.89, 1.0)
   wash = rgba(0.62, 0.66, 0.74, 1.0)
-  base = 6.5
+  -- brush:begin
+  base = 6.5                     -- line weight
+  momentum = 1.0                 -- corner sweep: 1 = midpoint to midpoint, toward 0 = sharper turns
+  pressure = 1.0                 -- swell on tight turns: 0 = even line, 1 = default, 2 = heavy
+  -- brush:end
+  cut = 0.5 * momentum           -- corners start this far along each chord from their vertex
   gap = 2.6                      -- halo width on each side of a front stroke
   ramp = 0.06                    -- depth band over which ink fades in at the rim
 
@@ -57,12 +77,12 @@ global {
   layer haloTop above backTop
 }
 
--- tilt, then project orthographically; keep depth z2 (+1 = nearest the viewer)
+-- rotate into view, then project orthographically; keep depth z2 (+1 = nearest the viewer)
 forall Vertex v; Number x; Number y; Number z
 where At(v, x, y, z) {
-  v.x2 = x
-  v.y2 = y * cos(global.tilt) - z * sin(global.tilt)
-  v.z2 = y * sin(global.tilt) + z * cos(global.tilt)
+  v.x2 = global.r00 * x + global.r01 * y + global.r02 * z
+  v.y2 = global.r10 * x + global.r11 * y + global.r12 * z
+  v.z2 = global.r20 * x + global.r21 * y + global.r22 * z
   v.p = (global.scale * v.x2, global.scale * v.y2)
   v.front = max(0.0, min(1.0, (v.z2 + global.ramp) / (2.0 * global.ramp)))
 
@@ -97,10 +117,12 @@ where Contact(a, b) {
 
 -- Geometry of each rounded corner, stored on its middle vertex b
 -- (every vertex is the middle of at most one corner on a Hamiltonian path).
+-- The corner runs from `cut` of the way back along ab to `cut` of the way along bc;
+-- with full momentum (cut = 0.5) those are the chord midpoints and corners meet directly.
 forall Vertex a; Vertex b; Vertex c
 where Step(a, b); Step(b, c) {
-  b.m1 = (a.p + b.p) / 2.0
-  b.m2 = (b.p + c.p) / 2.0
+  b.m1 = b.p + global.cut * (a.p - b.p)
+  b.m2 = b.p + global.cut * (c.p - b.p)
   din = b.p - b.m1
   dout = b.m2 - b.p
   turn = dot(din, dout) / (norm(din) * norm(dout))
@@ -108,7 +130,7 @@ where Step(a, b); Step(b, c) {
   -- depth thinning, evaluated at the shared chord midpoints so neighbours agree
   b.hin = global.base / 2.0 * (0.72 + 0.28 * (a.z2 + b.z2) / 2.0)
   b.hout = global.base / 2.0 * (0.72 + 0.28 * (b.z2 + c.z2) / 2.0)
-  b.hw = (b.hin + b.hout) / 2.0 * (1.55 - 0.85 * turn)
+  b.hw = (b.hin + b.hout) / 2.0 * (1.0 + global.pressure * (0.55 - 0.85 * turn))
 
   b.n0 = rot90(normalize(din))
   b.n2 = rot90(normalize(dout))
@@ -147,10 +169,10 @@ where Step(a, b); Step(b, c) {
   layer b.ink above global.haloTop
 }
 
--- entry press: from the first vertex to the first chord midpoint
+-- entry press: from the first vertex to where the first straight run begins
 forall Vertex a; Vertex b
 where Start(a); Step(a, b) {
-  m = (a.p + b.p) / 2.0
+  m = a.p + global.cut * (b.p - a.p)
   n = rot90(normalize(m - a.p))
   hm = global.base / 2.0 * (0.72 + 0.28 * (a.z2 + b.z2) / 2.0)
   hs = hm * 1.25
@@ -195,10 +217,10 @@ where Start(a); Step(a, b) {
   layer a.pressInk above global.haloTop
 }
 
--- exit: taper from the last chord midpoint toward the final vertex
+-- exit: taper from where the last straight run ends toward the final vertex
 forall Vertex a; Vertex b
 where Step(a, b); End(b) {
-  m = (a.p + b.p) / 2.0
+  m = b.p + global.cut * (a.p - b.p)
   n = rot90(normalize(b.p - m))
   hm = global.base / 2.0 * (0.72 + 0.28 * (a.z2 + b.z2) / 2.0)
   tip = m + 0.85 * (b.p - m)
@@ -226,4 +248,54 @@ where Step(a, b); End(b) {
   layer b.tailHalo above global.backTop
   layer b.tailHalo below global.haloTop
   layer b.tailInk above global.haloTop
+}
+
+-- straight run along each step, between the corner (or entry/exit) at each end.
+-- Zero length at full momentum. Split at the chord midpoint so each half fades with its
+-- own vertex, exactly where the corners used to meet.
+forall Vertex a; Vertex b
+where Step(a, b) {
+  s0 = a.p + global.cut * (b.p - a.p)
+  s1 = b.p + global.cut * (a.p - b.p)
+  mid = (a.p + b.p) / 2.0
+  n = rot90(normalize(b.p - a.p))
+  h = global.base / 2.0 * (0.72 + 0.28 * (a.z2 + b.z2) / 2.0)
+  g = global.gap
+
+  shape runBack = Path {
+    d: pathFromPoints("closed", [s0 + h * n, s1 + h * n, s1 - h * n, s0 - h * n])
+    fillColor: global.wash
+    strokeColor: global.wash
+    strokeWidth: 0.4
+  }
+  shape runHaloA = Path {
+    d: pathFromPoints("closed", [s0 + (h + g) * n, mid + (h + g) * n, mid - (h + g) * n, s0 - (h + g) * n])
+    fillColor: rgba(0.96, 0.94, 0.89, a.front)
+    strokeColor: none()
+  }
+  shape runHaloB = Path {
+    d: pathFromPoints("closed", [mid + (h + g) * n, s1 + (h + g) * n, s1 - (h + g) * n, mid - (h + g) * n])
+    fillColor: rgba(0.96, 0.94, 0.89, b.front)
+    strokeColor: none()
+  }
+  shape runInkA = Path {
+    d: pathFromPoints("closed", [s0 + h * n, mid + h * n, mid - h * n, s0 - h * n])
+    fillColor: rgba(0.09, 0.08, 0.07, a.front)
+    strokeColor: rgba(0.09, 0.08, 0.07, a.front)
+    strokeWidth: 0.4
+  }
+  shape runInkB = Path {
+    d: pathFromPoints("closed", [mid + h * n, s1 + h * n, s1 - h * n, mid - h * n])
+    fillColor: rgba(0.09, 0.08, 0.07, b.front)
+    strokeColor: rgba(0.09, 0.08, 0.07, b.front)
+    strokeWidth: 0.4
+  }
+  layer runBack above global.rim
+  layer runBack below global.backTop
+  layer runHaloA above global.backTop
+  layer runHaloA below global.haloTop
+  layer runHaloB above global.backTop
+  layer runHaloB below global.haloTop
+  layer runInkA above global.haloTop
+  layer runInkB above global.haloTop
 }

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Loop Viewer Spike</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "/node_modules/three/build/three.module.js",
+      "three/addons/": "/node_modules/three/examples/jsm/",
+      "@penrose/core": "/node_modules/@penrose/core/dist/bundle/index.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>A glyph is a view of a loop</h1>
+      <p>Drag the sphere to turn the loop. Let go, and Penrose inks the glyph from that viewpoint.</p>
+    </header>
+
+    <section class="panels">
+      <figure>
+        <div id="sphere" class="panel" aria-label="3D view of the loop on the sphere"></div>
+        <figcaption>3D, live</figcaption>
+      </figure>
+      <figure>
+        <div id="ink" class="panel" aria-label="Penrose ink rendering"></div>
+        <figcaption id="status">ink, Penrose</figcaption>
+      </figure>
+    </section>
+
+    <section class="controls">
+      <div class="group" role="radiogroup" aria-label="Surface loop">
+        <span class="label">loop</span>
+        <button data-loop="A" aria-pressed="true">A</button>
+        <button data-loop="B" aria-pressed="false">B</button>
+        <button data-loop="C" aria-pressed="false">C</button>
+      </div>
+      <label class="group">
+        <span class="label">step k</span>
+        <input id="k" type="range" min="1" max="6" step="1" value="1">
+        <output id="kval">1</output>
+      </label>
+      <button id="reset">reset view</button>
+    </section>
+
+    <section class="controls brush" aria-label="Brush">
+      <label class="group" title="Overall line weight">
+        <span class="label">weight</span>
+        <input id="base" type="range" min="1.5" max="16" step="0.5">
+        <output id="baseval"></output>
+      </label>
+      <label class="group" title="1: the brush sweeps from chord midpoint to midpoint. Lower: it turns closer to each point, with straight runs between">
+        <span class="label">momentum</span>
+        <input id="momentum" type="range" min="0.05" max="1" step="0.05">
+        <output id="momentumval"></output>
+      </label>
+      <label class="group" title="How much the brush presses down on tight turns. 0: an even line. Ink only">
+        <span class="label">pressure</span>
+        <input id="pressure" type="range" min="0" max="2.5" step="0.1">
+        <output id="pressureval"></output>
+      </label>
+    </section>
+
+    <p class="note">
+      Momentum and weight shape both views; pressure, the swelling on tight turns, appears in the ink only.
+      k = 1 follows the loop along the sphere's surface. Larger k connects every k-th point of
+      the same loop, so the stroke cuts through the interior, like the star polygon {13/k} on a circle.
+    </p>
+  </main>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

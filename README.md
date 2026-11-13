@@ -76,7 +76,12 @@ together with the Domain and one of the Styles.
 - **Projection:** `v.k` in each style. It is currently Lambert equal-area about the 4-fold axis;
   stereographic would be `scale / (1 + z)`.
 - **Pressure:** `hw = h0 * (1.55 - 0.85 * turn)` in `brush.style`. `base` sets the overall weight.
-- **Tilt:** `tilt` in `glass.style`. 0.0 looks straight down the axis; values up to about 1.2 work.
+- **View:** `tilt` and `spin` in `glass.style`'s `view` block. Tilt 0.0 looks straight down the
+  axis; values up to about 1.2 work. A page can replace the block with any rotation matrix.
+- **Brush (glass.style):** `base` is the line weight. `momentum` sets how wide corners are cut:
+  1 sweeps from chord midpoint to midpoint, and lower values turn closer to each point, with
+  straight runs between. `pressure` scales the swelling on tight turns: 0 gives an even line.
+  Try all three live in the site spike (`scripts/serve.sh`).
 - **Pole and orientation:** `largest_hole` and `orient` in `src/glyphs.py`.
 
 ## Credits

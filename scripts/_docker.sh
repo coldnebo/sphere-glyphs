@@ -28,9 +28,11 @@ build() {  # build <target>   (cached layers make this ~instant after the first 
   docker build --quiet --target "$1" -t "$IMAGE:$1" "$HOST_ROOT" >/dev/null
 }
 
-run_mounted() {  # run_mounted <target> <cmd...>
+run_mounted() {  # run_mounted <target> <cmd...>     (PORTS="8000 ..." publishes ports)
   local target="$1"; shift
-  docker run --rm "${TTY_ARGS[@]}" "${USER_ARGS[@]}" \
+  local port_args=()
+  for p in ${PORTS:-}; do port_args+=(-p "$p:$p"); done
+  docker run --rm "${TTY_ARGS[@]}" "${USER_ARGS[@]}" "${port_args[@]}" \
     -v "$HOST_ROOT:$WORKDIR" -w "$WORKDIR" \
     "$IMAGE:$target" "$@"
 }

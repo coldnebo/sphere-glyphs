@@ -12,6 +12,8 @@
   "workspaceFolder": "/workspace/sphere-glyphs",
   "remoteUser": "node",
   "updateRemoteUserUID": true,
+  // site preview: node scripts/serve.mjs  ->  http://localhost:8000/site/spike/
+  "forwardPorts": [8000],
   "customizations": {
     "vscode": {
       "settings": {

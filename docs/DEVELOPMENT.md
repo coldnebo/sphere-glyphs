@@ -96,7 +96,21 @@ purpose, run `scripts/build-examples.sh --regen` and commit the regenerated exam
 ## Dependencies
 
 - **Node:** `@penrose/core` 3.3.1 (pinned, because the styles were written against it), `jsdom`
-  (Penrose needs a DOM), and `@resvg/resvg-js` (SVG to PNG). After editing `package.json`, refresh
-  the lockfile with `scripts/dev.sh npm install --package-lock-only`. The next script run rebuilds
-  the image.
+  (Penrose needs a DOM), `@resvg/resvg-js` (SVG to PNG), and `three` (the site's 3D views).
+  After editing `package.json`, refresh the lockfile from a plain Node container. `dev.sh`
+  can't do it, because building the dev image runs `npm ci`, which refuses an outdated lockfile:
+  ```sh
+  MSYS_NO_PATHCONV=1 docker run --rm -v "$(pwd -W 2>/dev/null || pwd):/w" -w /w \
+      node:22-bookworm-slim npm install --package-lock-only
+  ```
+  The next script run rebuilds the image.
+
+## Site preview
+
+`scripts/serve.sh` serves the repo from the dev container at <http://localhost:8000>, with the
+image's `node_modules` mounted at `/node_modules/`. The spike is at
+<http://localhost:8000/site/spike/>. In the devcontainer, run `node scripts/serve.mjs`; port
+8000 is forwarded.
+
+The spike's data comes from `python3 src/site_data.py examples/glyphs/glyphs.json site/spike/data.json`.
 - **Python:** `numpy`, `scipy` and `pytest`, pinned in `requirements.txt`.
