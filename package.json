@@ -1,0 +1,19 @@
+{
+  "name": "sphere-glyphs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A generative writing system from paths through the 13-point Tammes configuration, rendered with Penrose.",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "render": "node src/render.mjs",
+    "sheet": "node src/sheet.mjs",
+    "test": "node --test 'tests/**/*.test.mjs'"
+  },
+  "dependencies": {
+    "@penrose/core": "3.3.1",
+    "@resvg/resvg-js": "2.6.2",
+    "jsdom": "^25.0.1"
+  }
+}

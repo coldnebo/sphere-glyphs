@@ -1,0 +1,100 @@
+-- Seal style: formal, uniform line weight.
+-- Each stroke is a great-circle arc of the sphere, drawn through its projected
+-- midpoint. Projection: Lambert azimuthal equal-area, centred on the north pole
+-- (the 4-fold symmetry axis of the 13-point optimum):
+--     (x, y, z)  ->  (x, y) * sqrt(2 / (1 + z))
+-- The whole sphere lands in a disc of radius 2; its far pole is the rim.
+
+canvas {
+  width = 400
+  height = 400
+}
+
+global {
+  scale = 88.0
+  ink = rgba(0.10, 0.09, 0.08, 1.0)
+  ghost = rgba(0.10, 0.09, 0.08, 0.13)
+  inkWidth = 7.0
+
+  -- the rim: image of the far pole (the centre of the largest empty cap)
+  shape horizon = Circle {
+    center: (0.0, 0.0)
+    r: 2.0 * scale
+    fillColor: none()
+    strokeColor: rgba(0.10, 0.09, 0.08, 0.06)
+    strokeWidth: 1.0
+  }
+}
+
+-- Lift the literal coordinates into Style and project them.
+forall Vertex v; Number x; Number y; Number z
+where At(v, x, y, z) {
+  v.x = x
+  v.y = y
+  v.z = z
+  v.k = global.scale * sqrt(2.0 / (1.0 + z))
+  v.p = (v.k * x, v.k * y)
+
+  shape v.dot = Circle {
+    center: v.p
+    r: 2.5
+    fillColor: global.ghost
+    strokeColor: none()
+  }
+}
+
+-- Shared geometry for any pair of vertices joined by a contact edge:
+-- the projected midpoint of the great-circle arc between them.
+forall Vertex a; Vertex b
+where Contact(a, b) {
+  mx = a.x + b.x
+  my = a.y + b.y
+  mz = a.z + b.z
+  mn = sqrt(mx * mx + my * my + mz * mz)
+  mk = global.scale * sqrt(2.0 / (1.0 + mz / mn))
+  m = (mk * mx / mn, mk * my / mn)
+
+  shape arc = Path {
+    d: interpolateQuadraticFromPoints("open", a.p, m, b.p)
+    strokeColor: global.ghost
+    strokeWidth: 1.0
+    fillColor: none()
+  }
+}
+
+-- The glyph: each step of the path is drawn in ink.
+forall Vertex a; Vertex b
+where Step(a, b) {
+  mx = a.x + b.x
+  my = a.y + b.y
+  mz = a.z + b.z
+  mn = sqrt(mx * mx + my * my + mz * mz)
+  mk = global.scale * sqrt(2.0 / (1.0 + mz / mn))
+  m = (mk * mx / mn, mk * my / mn)
+
+  shape stroke = Path {
+    d: interpolateQuadraticFromPoints("open", a.p, m, b.p)
+    strokeColor: global.ink
+    strokeWidth: global.inkWidth
+    strokeLinecap: "round"
+    fillColor: none()
+  }
+  -- round joints between consecutive steps
+  shape joint = Circle {
+    center: b.p
+    r: global.inkWidth / 2.0
+    fillColor: global.ink
+    strokeColor: none()
+  }
+}
+
+-- Where the brush lands.
+forall Vertex v
+where Start(v) {
+  shape v.seal = Circle {
+    center: v.p
+    r: global.inkWidth * 1.15
+    fillColor: global.ink
+    strokeColor: none()
+  }
+}

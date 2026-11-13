@@ -1,0 +1,229 @@
+-- Glass style: the sphere is transparent and seen from outside.
+--
+-- Orthographic view along +z after tilting the sphere by `tilt` about the x-axis,
+-- so the 4-fold symmetry axis no longer points straight at the viewer and the
+-- front and back strokes interleave.
+--
+-- The brush stroke (same momentum/pressure model as brush.style) is drawn in three passes:
+--   BACK   every piece, in a pale wash
+--   HALO   a paper-coloured band, only where the stroke is in front -> over/under gaps
+--   FRONT  dark ink, faded in only where the stroke is in front
+-- Width also falls off with depth, so near strokes are heavier.
+-- The passes are pinned in order by two invisible marker shapes in `global`.
+
+canvas {
+  width = 400
+  height = 400
+}
+
+global {
+  scale = 165.0
+  tilt = 0.52                    -- radians; try 0.0 (axis-on) through 1.2
+  paper = rgba(0.96, 0.94, 0.89, 1.0)
+  wash = rgba(0.62, 0.66, 0.74, 1.0)
+  base = 6.5
+  gap = 2.6                      -- halo width on each side of a front stroke
+  ramp = 0.06                    -- depth band over which ink fades in at the rim
+
+  shape ground = Rectangle {
+    center: (0.0, 0.0)
+    width: 400.0
+    height: 400.0
+    fillColor: paper
+    strokeColor: none()
+  }
+  shape rim = Circle {
+    center: (0.0, 0.0)
+    r: scale
+    fillColor: rgba(0.55, 0.62, 0.75, 0.05)
+    strokeColor: rgba(0.30, 0.33, 0.40, 0.18)
+    strokeWidth: 1.0
+  }
+  -- layer markers
+  shape backTop = Circle {
+    center: (0.0, 0.0)
+    r: 0.0
+    fillColor: none()
+    strokeColor: none()
+  }
+  shape haloTop = Circle {
+    center: (0.0, 0.0)
+    r: 0.0
+    fillColor: none()
+    strokeColor: none()
+  }
+  layer rim above ground
+  layer backTop above rim
+  layer haloTop above backTop
+}
+
+-- tilt, then project orthographically; keep depth z2 (+1 = nearest the viewer)
+forall Vertex v; Number x; Number y; Number z
+where At(v, x, y, z) {
+  v.x2 = x
+  v.y2 = y * cos(global.tilt) - z * sin(global.tilt)
+  v.z2 = y * sin(global.tilt) + z * cos(global.tilt)
+  v.p = (global.scale * v.x2, global.scale * v.y2)
+  v.front = max(0.0, min(1.0, (v.z2 + global.ramp) / (2.0 * global.ramp)))
+
+  shape v.dot = Circle {
+    center: v.p
+    r: 1.6 + 0.8 * v.z2
+    fillColor: rgba(0.25, 0.27, 0.32, 0.18 + 0.22 * v.front)
+    strokeColor: none()
+  }
+  layer v.dot above global.rim
+  layer v.dot below global.backTop
+}
+
+-- faint contact graph, drawn as projected great-circle arcs
+forall Vertex a; Vertex b
+where Contact(a, b) {
+  mx = a.x2 + b.x2
+  my = a.y2 + b.y2
+  mz = a.z2 + b.z2
+  mn = sqrt(mx * mx + my * my + mz * mz)
+  m = (global.scale * mx / mn, global.scale * my / mn)
+
+  shape arc = Path {
+    d: interpolateQuadraticFromPoints("open", a.p, m, b.p)
+    strokeColor: rgba(0.25, 0.27, 0.32, 0.05 + 0.10 * max(0.0, mz / mn))
+    strokeWidth: 0.8
+    fillColor: none()
+  }
+  layer arc above global.rim
+  layer arc below global.backTop
+}
+
+-- Geometry of each rounded corner, stored on its middle vertex b
+-- (every vertex is the middle of at most one corner on a Hamiltonian path).
+forall Vertex a; Vertex b; Vertex c
+where Step(a, b); Step(b, c) {
+  b.m1 = (a.p + b.p) / 2.0
+  b.m2 = (b.p + c.p) / 2.0
+  din = b.p - b.m1
+  dout = b.m2 - b.p
+  turn = dot(din, dout) / (norm(din) * norm(dout))
+
+  -- depth thinning, evaluated at the shared chord midpoints so neighbours agree
+  b.hin = global.base / 2.0 * (0.72 + 0.28 * (a.z2 + b.z2) / 2.0)
+  b.hout = global.base / 2.0 * (0.72 + 0.28 * (b.z2 + c.z2) / 2.0)
+  b.hw = (b.hin + b.hout) / 2.0 * (1.55 - 0.85 * turn)
+
+  b.n0 = rot90(normalize(din))
+  b.n2 = rot90(normalize(dout))
+  b.nm = normalize(b.n0 + b.n2)
+  b.k = dot(b.n0 + b.n2, b.nm) / 4.0
+
+  -- BACK pass
+  reach = 2.0 * b.hw - (b.hin + b.hout) * b.k
+  shape b.back = Path {
+    d: joinPaths([quadraticCurveFromPoints("open", [b.m1 + b.hin * b.n0, b.p + reach * b.nm, b.m2 + b.hout * b.n2]), pathFromPoints("open", [b.m2 + b.hout * b.n2, b.m2 - b.hout * b.n2]), quadraticCurveFromPoints("open", [b.m2 - b.hout * b.n2, b.p - reach * b.nm, b.m1 - b.hin * b.n0]), pathFromPoints("open", [b.m1 - b.hin * b.n0, b.m1 + b.hin * b.n0])])
+    fillColor: global.wash
+    strokeColor: global.wash
+    strokeWidth: 0.4
+  }
+  layer b.back above global.rim
+  layer b.back below global.backTop
+
+  -- HALO pass: same outline grown by `gap`, in paper colour, only where in front
+  g = global.gap
+  hreach = 2.0 * (b.hw + g) - (b.hin + b.hout + 2.0 * g) * b.k
+  shape b.halo = Path {
+    d: joinPaths([quadraticCurveFromPoints("open", [b.m1 + (b.hin + g) * b.n0, b.p + hreach * b.nm, b.m2 + (b.hout + g) * b.n2]), pathFromPoints("open", [b.m2 + (b.hout + g) * b.n2, b.m2 - (b.hout + g) * b.n2]), quadraticCurveFromPoints("open", [b.m2 - (b.hout + g) * b.n2, b.p - hreach * b.nm, b.m1 - (b.hin + g) * b.n0]), pathFromPoints("open", [b.m1 - (b.hin + g) * b.n0, b.m1 + (b.hin + g) * b.n0])])
+    fillColor: rgba(0.96, 0.94, 0.89, b.front)
+    strokeColor: none()
+  }
+  layer b.halo above global.backTop
+  layer b.halo below global.haloTop
+
+  -- FRONT pass
+  shape b.ink = Path {
+    d: joinPaths([quadraticCurveFromPoints("open", [b.m1 + b.hin * b.n0, b.p + reach * b.nm, b.m2 + b.hout * b.n2]), pathFromPoints("open", [b.m2 + b.hout * b.n2, b.m2 - b.hout * b.n2]), quadraticCurveFromPoints("open", [b.m2 - b.hout * b.n2, b.p - reach * b.nm, b.m1 - b.hin * b.n0]), pathFromPoints("open", [b.m1 - b.hin * b.n0, b.m1 + b.hin * b.n0])])
+    fillColor: rgba(0.09, 0.08, 0.07, b.front)
+    strokeColor: rgba(0.09, 0.08, 0.07, b.front)
+    strokeWidth: 0.4
+  }
+  layer b.ink above global.haloTop
+}
+
+-- entry press: from the first vertex to the first chord midpoint
+forall Vertex a; Vertex b
+where Start(a); Step(a, b) {
+  m = (a.p + b.p) / 2.0
+  n = rot90(normalize(m - a.p))
+  hm = global.base / 2.0 * (0.72 + 0.28 * (a.z2 + b.z2) / 2.0)
+  hs = hm * 1.25
+  g = global.gap
+
+  shape a.leadBack = Path {
+    d: pathFromPoints("closed", [a.p + hs * n, m + hm * n, m - hm * n, a.p - hs * n])
+    fillColor: global.wash
+    strokeColor: global.wash
+    strokeWidth: 0.4
+  }
+  shape a.pressBack = Circle {
+    center: a.p
+    r: hs * 1.12
+    fillColor: global.wash
+    strokeColor: none()
+  }
+  shape a.leadHalo = Path {
+    d: pathFromPoints("closed", [a.p + (hs + g) * n, m + (hm + g) * n, m - (hm + g) * n, a.p - (hs + g) * n])
+    fillColor: rgba(0.96, 0.94, 0.89, a.front)
+    strokeColor: none()
+  }
+  shape a.leadInk = Path {
+    d: pathFromPoints("closed", [a.p + hs * n, m + hm * n, m - hm * n, a.p - hs * n])
+    fillColor: rgba(0.09, 0.08, 0.07, a.front)
+    strokeColor: rgba(0.09, 0.08, 0.07, a.front)
+    strokeWidth: 0.4
+  }
+  shape a.pressInk = Circle {
+    center: a.p
+    r: hs * 1.12
+    fillColor: rgba(0.09, 0.08, 0.07, a.front)
+    strokeColor: none()
+  }
+  layer a.leadBack above global.rim
+  layer a.leadBack below global.backTop
+  layer a.pressBack above global.rim
+  layer a.pressBack below global.backTop
+  layer a.leadHalo above global.backTop
+  layer a.leadHalo below global.haloTop
+  layer a.leadInk above global.haloTop
+  layer a.pressInk above global.haloTop
+}
+
+-- exit: taper from the last chord midpoint toward the final vertex
+forall Vertex a; Vertex b
+where Step(a, b); End(b) {
+  m = (a.p + b.p) / 2.0
+  n = rot90(normalize(b.p - m))
+  hm = global.base / 2.0 * (0.72 + 0.28 * (a.z2 + b.z2) / 2.0)
+  tip = m + 0.85 * (b.p - m)
+  g = global.gap
+
+  shape b.tailBack = Path {
+    d: pathFromPoints("closed", [m + hm * n, tip, m - hm * n])
+    fillColor: global.wash
+    strokeColor: global.wash
+    strokeWidth: 0.4
+  }
+  shape b.tailHalo = Path {
+    d: pathFromPoints("closed", [m + (hm + g) * n, tip + g * normalize(b.p - m), m - (hm + g) * n])
+    fillColor: rgba(0.96, 0.94, 0.89, b.front)
+    strokeColor: none()
+  }
+  shape b.tailInk = Path {
+    d: pathFromPoints("closed", [m + hm * n, tip, m - hm * n])
+    fillColor: rgba(0.09, 0.08, 0.07, b.front)
+    strokeColor: rgba(0.09, 0.08, 0.07, b.front)
+    strokeWidth: 0.4
+  }
+  layer b.tailBack above global.rim
+  layer b.tailBack below global.backTop
+  layer b.tailHalo above global.backTop
+  layer b.tailHalo below global.haloTop
+  layer b.tailInk above global.haloTop
+}

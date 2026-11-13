@@ -1,0 +1,145 @@
+-- Brush style: expressive, toward running/cursive script.
+--
+-- Same points and projection as seal.style (Lambert equal-area about the symmetry axis),
+-- but the stroke is modelled as a moving brush instead of exact geometry:
+--   * momentum: the brush never reaches a vertex; it cuts the corner, running from the
+--     midpoint of one arc to the midpoint of the next with the vertex as a control point
+--   * pressure: a tight turn is slow, so the brush presses down and the line thickens;
+--     a nearly straight pass is fast and thin
+--   * entry press at the start, and a thin lifted tail at the end
+
+canvas {
+  width = 400
+  height = 400
+}
+
+global {
+  scale = 88.0
+  paper = rgba(0.96, 0.94, 0.89, 1.0)
+  ink = rgba(0.09, 0.08, 0.07, 0.94)
+  ghost = rgba(0.45, 0.20, 0.12, 0.16)
+  base = 6.0
+
+  shape ground = Rectangle {
+    center: (0.0, 0.0)
+    width: 400.0
+    height: 400.0
+    fillColor: paper
+    strokeColor: none()
+  }
+}
+
+forall Vertex v; Number x; Number y; Number z
+where At(v, x, y, z) {
+  v.x = x
+  v.y = y
+  v.z = z
+  v.k = global.scale * sqrt(2.0 / (1.0 + z))
+  v.p = (v.k * x, v.k * y)
+
+  shape v.dot = Circle {
+    center: v.p
+    r: 2.0
+    fillColor: global.ghost
+    strokeColor: none()
+  }
+  layer v.dot above global.ground
+}
+
+-- faint contact graph: the "grid" the glyph is written on
+forall Vertex a; Vertex b
+where Contact(a, b) {
+  mx = a.x + b.x
+  my = a.y + b.y
+  mz = a.z + b.z
+  mn = sqrt(mx * mx + my * my + mz * mz)
+  mk = global.scale * sqrt(2.0 / (1.0 + mz / mn))
+  m = (mk * mx / mn, mk * my / mn)
+
+  shape arc = Path {
+    d: interpolateQuadraticFromPoints("open", a.p, m, b.p)
+    strokeColor: global.ghost
+    strokeWidth: 0.8
+    fillColor: none()
+  }
+  layer arc above global.ground
+}
+
+-- every interior vertex b of the path, entered from a and left toward c.
+-- The centreline is a quadratic Bezier from the midpoint of chord ab, pulled toward b,
+-- to the midpoint of chord bc: momentum rounds the corner, and because consecutive
+-- pieces share midpoints and tangent directions, the stroke stays smooth.
+-- The piece is drawn as a filled outline: half-width h0 where pieces meet,
+-- swelling (or narrowing) to hw at the turn.
+forall Vertex a; Vertex b; Vertex c
+where Step(a, b); Step(b, c) {
+  m1 = (a.p + b.p) / 2.0
+  m2 = (b.p + c.p) / 2.0
+  din = b.p - m1
+  dout = m2 - b.p
+
+  -- turn: 1 = straight through (fast, thin), lower = sharper (slow, pressed)
+  turn = dot(din, dout) / (norm(din) * norm(dout))
+  h0 = global.base / 2.0
+  hw = h0 * (1.55 - 0.85 * turn)
+
+  -- offset the control polygon on each side
+  n0 = rot90(normalize(din))
+  n2 = rot90(normalize(dout))
+  nm = normalize(n0 + n2)
+  reach = 2.0 * hw - h0 * dot(n0 + n2, nm) / 2.0
+
+  left = quadraticCurveFromPoints("open", [m1 + h0 * n0, b.p + reach * nm, m2 + h0 * n2])
+  capEnd = pathFromPoints("open", [m2 + h0 * n2, m2 - h0 * n2])
+  right = quadraticCurveFromPoints("open", [m2 - h0 * n2, b.p - reach * nm, m1 - h0 * n0])
+  capStart = pathFromPoints("open", [m1 - h0 * n0, m1 + h0 * n0])
+
+  shape corner = Path {
+    d: joinPaths([left, capEnd, right, capStart])
+    fillColor: global.ink
+    strokeColor: global.ink
+    strokeWidth: 0.4
+  }
+  layer corner above global.ground
+}
+
+-- entry: the brush lands with a press, then runs to the first midpoint
+forall Vertex a; Vertex b
+where Start(a); Step(a, b) {
+  m = (a.p + b.p) / 2.0
+  n = rot90(normalize(m - a.p))
+  hs = global.base * 0.62
+  h0 = global.base / 2.0
+
+  shape lead = Path {
+    d: pathFromPoints("closed", [a.p + hs * n, m + h0 * n, m - h0 * n, a.p - hs * n])
+    fillColor: global.ink
+    strokeColor: global.ink
+    strokeWidth: 0.4
+  }
+  shape press = Circle {
+    center: a.p
+    r: hs * 1.12
+    fillColor: global.ink
+    strokeColor: none()
+  }
+  layer lead above global.ground
+  layer press above global.ground
+}
+
+-- exit: the brush lifts, the line tapers to a point short of the last vertex
+forall Vertex a; Vertex b
+where Step(a, b); End(b) {
+  m = (a.p + b.p) / 2.0
+  n = rot90(normalize(b.p - m))
+  h0 = global.base / 2.0
+  tip = m + 0.85 * (b.p - m)
+
+  shape tail = Path {
+    d: pathFromPoints("closed", [m + h0 * n, tip, m - h0 * n])
+    fillColor: global.ink
+    strokeColor: global.ink
+    strokeWidth: 0.4
+  }
+  layer tail above global.ground
+}

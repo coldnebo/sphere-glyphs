@@ -1,0 +1,20 @@
+-- Tammes glyphs: paths through an optimal spherical point configuration.
+--
+-- A Vertex is one of the N Tammes points on the unit sphere.
+-- Its position is given as literal 3D coordinates (computed offline by tammes.py)
+-- so the Style program can choose how to project the sphere onto the page.
+
+type Vertex
+
+-- Unit-sphere coordinates, already rotated so the projection pole
+-- (the centre of the largest empty cap) sits at the south pole (0, 0, -1).
+predicate At(Vertex v, Number x, Number y, Number z)
+
+-- Two vertices at exactly the minimum (Tammes) distance: an edge of the contact graph.
+predicate Contact(Vertex a, Vertex b)
+
+-- The glyph itself: a path visiting the vertices along contact edges.
+-- Step(a, b) means the stroke moves from a to b.
+predicate Step(Vertex a, Vertex b)
+predicate Start(Vertex v)
+predicate End(Vertex v)

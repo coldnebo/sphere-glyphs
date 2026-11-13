@@ -1,0 +1,35 @@
+// VS Code Dev Container: same image and mount layout as scripts/dev.sh.
+// "Dev Containers: Reopen in Container" (ms-vscode-remote.remote-containers).
+{
+  "name": "sphere-glyphs",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": "..",
+    "target": "dev"
+  },
+  // Mount the repo one level below /workspace so it finds the image's /workspace/node_modules.
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace/sphere-glyphs,type=bind",
+  "workspaceFolder": "/workspace/sphere-glyphs",
+  "remoteUser": "node",
+  "updateRemoteUserUID": true,
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/opt/venv/bin/python",
+        "python.testing.pytestEnabled": true,
+        "python.testing.pytestArgs": ["tests"],
+        // No Penrose language extension exists; Haskell highlighting gets the `--` comments right.
+        "files.associations": {
+          "*.domain": "haskell",
+          "*.substance": "haskell",
+          "*.style": "haskell"
+        }
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "jock.svg"
+      ]
+    }
+  }
+}
