@@ -36,3 +36,39 @@ test("every preset lays down ink, and ink only darkens the paper", () => {
     assert.ok(dark > 400, `${name}: only ${dark} inked pixels`);
   }
 });
+
+test("the painting doesn't change with resolution: a small preview and a large print agree", () => {
+  // paint at 300 and 1200 px, average the large one down to 300, and compare the ink:
+  // total coverage, and where it lies (correlation of 15 x 15 blocks)
+  for (const name of ["fluent", "big"]) {
+    const small = canvas(300), large = canvas(1200);
+    paintGlyph(small, data.points, loop, { size: 300, ...BRUSHES[name] });
+    paintGlyph(large, data.points, loop, { size: 1200, ...BRUSHES[name] });
+    const ink = (buf, f) => {                      // darkness (0..1) of each 300-px pixel
+      const out = new Float32Array(300 * 300);
+      for (let y = 0; y < buf.h; y++) for (let x = 0; x < buf.w; x++) {
+        out[Math.floor(y / f) * 300 + Math.floor(x / f)] += (1 - buf.rgb[(y * buf.w + x) * 3] / 245) / (f * f);
+      }
+      return out;
+    };
+    const a = ink(small, 1), b = ink(large, 4);
+    const total = (v) => v.reduce((s, x) => s + x, 0);
+    const ratio = total(b) / total(a);
+    assert.ok(ratio > 0.85 && ratio < 1.15, `${name}: ink differs by ${((ratio - 1) * 100).toFixed(0)}%`);
+    const blocks = (v) => {
+      const out = new Float32Array(20 * 20);
+      for (let i = 0; i < v.length; i++) out[Math.floor(Math.floor(i / 300) / 15) * 20 + Math.floor((i % 300) / 15)] += v[i];
+      return out;
+    };
+    const A = blocks(a), B = blocks(b);
+    const mean = (v) => total(v) / v.length, ma = mean(A), mb = mean(B);
+    let num = 0, da = 0, db = 0;
+    for (let i = 0; i < A.length; i++) {
+      num += (A[i] - ma) * (B[i] - mb);
+      da += (A[i] - ma) ** 2;
+      db += (B[i] - mb) ** 2;
+    }
+    const r = num / Math.sqrt(da * db);
+    assert.ok(r > 0.93, `${name}: ink lies in different places (r = ${r.toFixed(3)})`);
+  }
+});

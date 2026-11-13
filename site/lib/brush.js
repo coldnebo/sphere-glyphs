@@ -136,21 +136,39 @@ export function paper(buf, rand) {
  * dry brush catches on. Only built when grit asks for it.
  */
 function toothField(w, h, k, rand) {
+  // Both grains are sized in glyph units (k pixels per unit), so a small preview and a large
+  // print have the same paper, just at different resolutions.
+  // Below the glyph's scale, a finer fibre and a pixel grain add detail that only a large print
+  // resolves, as real paper would; a small preview averages them away.
+  const coarse = valueNoise(w, h, Math.max(2, 7 * k), rand);
+  const fine = valueNoise(w, h, Math.max(1, 1.1 * k), rand);
+  const finer = k > 1.5 ? valueNoise(w, h, Math.max(1, 0.4 * k), rand) : fine;
   const field = new Float32Array(w * h);
-  const cell = Math.max(3, Math.round(7 * k));
-  const gw = Math.ceil(w / cell) + 2, gh = Math.ceil(h / cell) + 2;
-  const coarse = Float32Array.from({ length: gw * gh }, rand);
-  for (let y = 0; y < h; y++) {
-    const gy = y / cell, iy = Math.floor(gy), fy = gy - iy;
-    for (let x = 0; x < w; x++) {
-      const gx = x / cell, ix = Math.floor(gx), fx = gx - ix;
-      const a = coarse[iy * gw + ix], b = coarse[iy * gw + ix + 1];
-      const c = coarse[(iy + 1) * gw + ix], d = coarse[(iy + 1) * gw + ix + 1];
-      const smooth = (a * (1 - fx) + b * fx) * (1 - fy) + (c * (1 - fx) + d * fx) * fy;
-      field[y * w + x] = 0.55 * smooth + 0.45 * rand();
-    }
+  for (let i = 0; i < field.length; i++) {
+    field[i] = 0.5 * coarse[i] + 0.3 * fine[i] + 0.12 * finer[i] + 0.08 * rand();
   }
   return field;
+}
+
+/**
+ * Smooth random noise (0..1) on a grid of `cell` pixels. Blended with smoothstep rather than
+ * linearly, so it has no visible corners (which the ink threshold would turn into diamonds).
+ */
+function valueNoise(w, h, cell, rand) {
+  const gw = Math.ceil(w / cell) + 2, gh = Math.ceil(h / cell) + 2;
+  const grid = Float32Array.from({ length: gw * gh }, rand);
+  const out = new Float32Array(w * h);
+  const ease = (t) => t * t * (3 - 2 * t);
+  for (let y = 0; y < h; y++) {
+    const gy = y / cell, iy = Math.floor(gy), fy = ease(gy - iy);
+    for (let x = 0; x < w; x++) {
+      const gx = x / cell, ix = Math.floor(gx), fx = ease(gx - ix);
+      const a = grid[iy * gw + ix], b = grid[iy * gw + ix + 1];
+      const c = grid[(iy + 1) * gw + ix], d = grid[(iy + 1) * gw + ix + 1];
+      out[y * w + x] = (a * (1 - fx) + b * fx) * (1 - fy) + (c * (1 - fx) + d * fx) * fy;
+    }
+  }
+  return out;
 }
 
 /**
@@ -165,10 +183,16 @@ export function paintGlyph(buf, points, loop, opts = {}) {
     size = buf.w, ink = 1, dryness = 1, splatter = 1, grit = 0, ground = true,
   } = opts;
   const bristles = opts.bristles ?? Math.round(26 - 10 * Math.min(1, grit));
-  const rand = rng(opts.seed ?? seedFrom(loop));
-  if (ground) paper(buf, rand);
+  // Separate random streams, so the brush is the same brush at every size: the paper uses as
+  // many numbers as it has pixels, and splatter as many as the stroke has samples, and neither
+  // may shift the bristles' own draws.
+  const seed = opts.seed ?? seedFrom(loop);
+  const rand = rng(seed);                              // the bristles
+  const paperRand = rng(seed ^ 0x5bd1e995);            // paper grain and tooth
+  const splash = rng(seed ^ 0x27d4eb2f);               // droplets, the landing press
+  if (ground) paper(buf, paperRand);
   const layer = { w: buf.w, h: buf.h, ab: new Float32Array(buf.w * buf.h * 3) };
-  if (grit > 0) layer.tooth = toothField(buf.w, buf.h, size / 400, rand);
+  if (grit > 0) layer.tooth = toothField(buf.w, buf.h, size / 400, paperRand);
   const line = centreline(points, loop, { ...opts, size });
   const N = line.length;
   // start the stroke at the first vertex, and lift a little before closing the loop (an enso)
@@ -202,6 +226,9 @@ export function paintGlyph(buf, points, loop, opts = {}) {
   const front = (z) => Math.min(1, Math.max(0, (z + 0.18) / 0.36));
 
   for (let s = start; s < stop; s++) {
+    // distance along the stroke in glyph units (the 400-unit canvas): every texture along the
+    // stroke is measured in these, never in pixels, so the painting doesn't change with size
+    const u = s / k;
     const p = line[s], q = line[Math.min(N - 1, s + 1)];
     const tx0 = q.x - p.x, ty0 = q.y - p.y, tl = Math.hypot(tx0, ty0) || 1;
     const tx = tx0 / tl, ty = ty0 / tl, nx = -ty, ny = tx;
@@ -222,7 +249,7 @@ export function paintGlyph(buf, points, loop, opts = {}) {
       // bristles spread when the brush presses, and wobble a little
       const spread = 0.78 + 0.32 * Math.min(1.4, press);
       const dryNow = 1 - Math.min(1, h.load / 0.3);
-      const jitter = (Math.sin(s * 0.05 + h.wobble) + 0.5 * Math.sin(s * 0.13 + h.wobble * 1.7)) * (0.2 + 0.5 * grit) * k;
+      const jitter = (Math.sin(u * 0.05 + h.wobble) + 0.5 * Math.sin(u * 0.13 + h.wobble * 1.7)) * (0.2 + 0.5 * grit) * k;
       const off = (h.o + h.pull * (0.35 + 0.65 * dryNow)) * hw * spread + jitter;
       const x = p.x + nx * off, y = p.y + ny * off;
       // ink given up here, as a share of the whole stroke: more when slow, less when fast,
@@ -234,20 +261,22 @@ export function paintGlyph(buf, points, loop, opts = {}) {
       // as streaks rather than speckle.
       const fast = Math.min(1, Math.max(0, (speed - 0.92) / 0.55));
       const skip = dryness * (fast * (0.45 + 0.55 * (1 - wet)) + 0.6 * (1 - wet) ** 2);
-      const grain = 0.5 + 0.35 * Math.sin(s * h.freq + h.grain) + 0.15 * Math.sin(s * h.freq * 3.7 + h.grain * 2.3);
+      const grain = 0.5 + 0.35 * Math.sin(u * h.freq + h.grain) + 0.15 * Math.sin(u * h.freq * 3.7 + h.grain * 2.3);
       if (grain < skip) continue;
-      const r = Math.max(0.55 * k, (hw / bristles) * (1.9 + 0.8 * grit));
+      // a dab at least about a pixel across, so small renders fill the stroke as large ones do
+      const r = Math.max(0.55 * k, (hw / bristles) * (1.9 + 0.8 * grit), 0.8);
       // how dry this bristle is at this moment decides how much of the paper's grain it misses
       const tooth = grit * Math.min(0.9, 0.22 + 0.5 * (1 - wet) + 0.45 * fast);
       stamp(layer, x, y, r, color, Math.min(1, opacity * (0.3 + 0.7 * wet)), tooth);
       h.load = Math.max(0, h.load - flow);
     }
 
-    // a sudden slowdown after a fast run throws ink onward, in the direction of travel
-    const slowing = prevSpeed - speed;
+    // a sudden slowdown after a fast run throws ink onward, in the direction of travel.
+    // Measured per glyph unit, and the chance spread over the k samples in each unit.
+    const slowing = (prevSpeed - speed) * k;
     if (splatter > 0 && slowing > 0.006 && prevSpeed > 1.05 && p.turn < 0.2) {
-      const chance = Math.min(1, slowing * 12 * splatter * (0.4 + 0.6 * tone));
-      if (rand() < chance) throwDroplets(layer, rand, p, tx, ty, hw, k, color, 1 + Math.floor(rand() * 3 * splatter));
+      const chance = Math.min(1, slowing * 12 * splatter * (0.4 + 0.6 * tone)) / k;
+      if (splash() < chance) throwDroplets(layer, splash, p, tx, ty, hw, k, color, 1 + Math.floor(splash() * 3 * splatter));
     }
     prevSpeed = speed;
   }
@@ -255,13 +284,13 @@ export function paintGlyph(buf, points, loop, opts = {}) {
   // the press where the brush lands: a pooled, slightly bleeding dot
   const first = line[start];
   for (let i = 0; i < 18; i++) {
-    const a = rand() * Math.PI * 2, d = Math.sqrt(rand()) * first.w * 1.1;
-    stamp(layer, first.x + Math.cos(a) * d, first.y + Math.sin(a) * d, first.w * (0.45 + 0.3 * rand()), INK, 0.92);
+    const a = splash() * Math.PI * 2, d = Math.sqrt(splash()) * first.w * 1.1;
+    stamp(layer, first.x + Math.cos(a) * d, first.y + Math.sin(a) * d, first.w * (0.45 + 0.3 * splash()), INK, 0.92);
   }
   // the flick as the brush lifts: a spray along the direction it was going
   const end = line[stop - 1], before = line[Math.max(0, stop - 6)];
   const ex = end.x - before.x, ey = end.y - before.y, el = Math.hypot(ex, ey) || 1;
-  throwDroplets(layer, rand, end, ex / el, ey / el, end.w, k, front(end.z) > 0.5 ? INK : LIGHT_INK, Math.round(4 + 6 * splatter));
+  throwDroplets(layer, splash, end, ex / el, ey / el, end.w, k, front(end.z) > 0.5 ? INK : LIGHT_INK, Math.round(4 + 6 * splatter));
 
   // lay the ink onto the paper
   for (let i = 0; i < layer.ab.length; i++) buf.rgb[i] *= 1 - layer.ab[i];
