@@ -15,7 +15,8 @@
     .home { min-height: 100svh; padding: 10vh 7vw 8vh; display: flex; flex-direction: column; justify-content: center; }
     .home h1 { font: 400 clamp(3.4rem, 9vw, 8.5rem)/0.9 var(--display); letter-spacing: -0.02em; margin: 0 0 1.6rem; }
     .home .intro { font-size: 1.3rem; max-width: 46ch; margin: 0 0 6vh; }
-    .doors { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3.5vw; }
+    .doors { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3vw; }
+    @media (max-width: 1200px) { .doors { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5vw; } }
     .door { text-decoration: none; display: block; }
     .door img {
       display: block; width: 100%; aspect-ratio: 1; object-fit: contain; background: var(--paper);
@@ -61,7 +62,7 @@
         <p>Every one of the 29,940,480 glyphs, each exactly once, on one endless wall.</p>
       </a>
       <a class="door" href="inspirations/">
-        <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Calligraphic_Galleon_MET_DP234017.jpg?width=800" alt="A galleon whose hull is written in gold Arabic calligraphy">
+        <img src="media/calligraphic-galleon-met-dp234017-oqknnj.webp" alt="A galleon whose hull is written in gold Arabic calligraphy">
         <h2>The written word as image</h2>
         <p>Ships made of names, a sultan's signature, and a poem written in a moving boat: the calligraphy behind the glyphs.</p>
       </a>

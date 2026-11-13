@@ -160,3 +160,14 @@ They default to the Pages address; set `SITE_URL` to build for a fork or a custo
 - **Drawing:** `site/lib/sketch.js` draws glyphs on canvas with the glass brush model, at about
   1 ms per glyph. Clicking a glyph opens it in the explorer for the Penrose ink.
 - **Addresses:** `library/#12345678` opens the wall at glyph No. 12,345,678.
+
+## Photographs
+
+Articles can show photographs from Wikimedia Commons by file name:
+`![caption](commons:File name.jpg)` for a plate, or `scroll:` for a long handscroll that the page
+scrolls sideways. `node site/media/fetch.mjs` downloads each one once, refuses anything that is
+not public domain or CC0, compresses it with sharp (WebP; JPEG for scrolls longer than WebP
+allows), and records its source page, artist and licence in `site/media/manifest.json`. The
+copies are committed and the site serves them, so pages never load images from Commons.
+The build fails for a plate that has not been fetched, and `tests/media.test.mjs` checks the
+licences and sizes.

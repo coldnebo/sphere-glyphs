@@ -23,6 +23,8 @@ import { writeImage } from "../src/penrose.mjs";
 //   lib/  vendor/     its shared module, three.js and the Penrose browser bundle
 const OUT = "_site";
 const EXPLORER = "../explorer/";
+// photographs used by the articles: local copies from Wikimedia Commons (site/media/fetch.mjs)
+const MEDIA = JSON.parse(readFileSync("site/media/manifest.json", "utf8"));
 // Link previews need absolute URLs; override for a fork or a custom domain.
 const SITE_URL = (process.env.SITE_URL ?? "https://coldnebo.github.io/sphere-glyphs/").replace(/\/?$/, "/");
 
@@ -131,16 +133,18 @@ async function figure(name, caption, dir) {
 /**
  * A plate from Wikimedia Commons, by file name: ![caption](commons:File name.jpg).
  * scroll: instead of commons: lays a long handscroll out at reading height, to be scrolled sideways.
- * The image is served by Commons at a fixed width; the plate links to the file page, which holds
- * the full licence and provenance.
+ * The image is our local copy (site/media/manifest.json); the plate links to the Commons file page,
+ * which holds the full licence, provenance and resolution.
  */
 function commonsPlate(kind, file, caption) {
-  const name = encodeURIComponent(file.trim().replace(/ /g, "_"));
-  // Commons caps thumbnails at 3840px wide, too short for a handscroll: those load the original
-  const src = `https://commons.wikimedia.org/wiki/Special:FilePath/${name}` + (kind === "scroll" ? "" : "?width=1600");
-  const page = `https://commons.wikimedia.org/wiki/File:${name}`;
+  // served from our own copy (site/media, made by site/media/fetch.mjs), never from Commons itself
+  const m = MEDIA[file.trim()];
+  if (!m) throw new Error(`commons:${file} is not in site/media/manifest.json: run node site/media/fetch.mjs`);
+  if (m.kind !== kind) throw new Error(`${file} was fetched as ${m.kind}:, but the article uses ${kind}:`);
+  const alt = esc(caption.replace(/[*_[\]]|\(.*?\)/g, ""));
   return `<figure class="plate ${kind === "scroll" ? "handscroll" : "photo"}">` +
-    `<a class="art-link" href="${page}"><img class="art" src="${src}" alt="${esc(caption.replace(/[*_[\]]|\(.*?\)/g, ""))}" loading="lazy" decoding="async"></a>` +
+    `<a class="art-link" href="${m.page}" title="Source, licence and full resolution on Wikimedia Commons">` +
+    `<img class="art" src="../media/${m.file}" width="${m.width}" height="${m.height}" alt="${alt}" loading="lazy" decoding="async"></a>` +
     `<figcaption>${inline(caption)}</figcaption></figure>`;
 }
 
@@ -283,6 +287,7 @@ async function buildHome() {
   });
   copyTo(join(OUT, "index.html"), "site/home.html", (html) => html.replace("<!-- social -->", tags));
   writeFileSync(join(OUT, ".nojekyll"), "");   // serve files as-is, no Jekyll processing
+  for (const m of Object.values(MEDIA)) copyTo(join(OUT, "media", m.file), join("site/media", m.file));
 }
 
 rmSync(OUT, { recursive: true, force: true });

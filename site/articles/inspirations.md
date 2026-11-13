@@ -10,7 +10,7 @@ new. Calligraphers in the Islamic world made pictures out of words, and calligra
 and Japan made the motion of the hand into the subject of the work. This is a small gallery of
 both, with every picture free to share.
 
-![One loop inked three ways: formal, as drawn throughout, and heavy. The same dial runs from seal script to wild cursive.](fig:tools)
+![One loop, five ways: the brush model's dial, set loosely after the five scripts of Chinese calligraphy, from seal to cursive.](fig:dial)
 
 ## Gold on indigo
 
@@ -61,7 +61,7 @@ Hellenistic pattern poems to Apollinaire.
 
 ## The lion of God
 
-![A lion written in Arabic script, after an anonymous Persian calligram of the 19th or early 20th century. Public domain.](commons:Shiite Calligraphy symbolising Ali as Tiger of God.png)
+![Calligram in the shape of a lion, Vesal Shirazi, Persia, 19th century. Ink and gold on paper. Public domain.](commons:Calligram in the shape of a lion.jpg)
 
 Ali ibn Abi Talib, cousin and son-in-law of the Prophet, was called *Asadullah*, "the Lion of
 God". So in Persian and Ottoman calligraphy his name and the prayers addressed to him were
@@ -71,7 +71,9 @@ supply the mane and the tail.[^lion]
 The constraint is the same one every glyph here faces: the shape must come out of the stroke,
 not be traced around it.
 
-**Look further:** a lion calligram by the Persian master Vesal Shirazi and others in
+**Look further:** a lion that is also a prayer: an
+[album page with the *Nad ʿAli*](https://commons.wikimedia.org/wiki/File:Page_from_an_album_with_the_Nad_%E2%80%9BAli,_a_prayer_to_%E2%80%9BAli_ibn_Abi_Talib,_cut-out_in_the_shape_of_a_lion.jpg)
+attributed to Mir ʿAli Haravi, early 16th century, and more in
 [Ali in calligraphy](https://commons.wikimedia.org/wiki/Category:Ali_in_calligraphy).
 
 ## A portrait without a face
@@ -101,7 +103,7 @@ on mountain steles in a standardised "small seal" script, traditionally credited
 minister Li Si. Every line has the same width; curves are even and symmetrical; nothing
 betrays the speed of a hand. It is writing that already looks engraved.
 
-Here is the distinction from the Shanghai galleries: for a thousand years Chinese
+For a thousand years Chinese
 calligraphers learned either from **steles**, carved stone known through ink rubbings, or from
 **model letters**, brush-written originals and their copies. In the Qing dynasty a whole
 "stele school" turned back to the carved scripts to escape the polish of the brush.[^stele]
@@ -121,7 +123,7 @@ square, every stroke is distinct, and the balance is exact enough that students 
 as their first lesson.[^ouyang]
 
 What survives is a rubbing of a stone cut from his brushwork: a brush shape seen through a
-chisel. That double translation is the "careful clean strokes, almost like an engraving".
+chisel. That double translation is why the strokes look so clean, almost engraved.
 
 **Look further:** [regular script](https://en.wikipedia.org/wiki/Regular_script), and
 [Ouyang Xun](https://en.wikipedia.org/wiki/Ouyang_Xun).
@@ -230,7 +232,7 @@ Each plate links to its file page, which gives the full provenance and licence.
 [^squarekufic]: Wikimedia Commons, ["Isfahan Royal Mosque minaret"](https://commons.wikimedia.org/wiki/File:Isfahan_Royal_Mosque_minaret.JPG) (tiling with the interlocking names Muhammad and Ali), and [Category: Square Kufic](https://commons.wikimedia.org/wiki/Category:Square_Kufic).
 [^tughra]: The Metropolitan Museum of Art, ["Tughra (Official Signature) of Sultan Süleiman the Magnificent," 38.149.1](https://www.metmuseum.org/art/collection/search/449533); image via [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Tughra_Suleiman.jpg).
 [^galleon]: The Metropolitan Museum of Art, ["Calligraphic Galleon," 'Abd al-Qadir Hisari, 2003.241](https://www.metmuseum.org/art/collection/search/454611); catalogue text reproduced on [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Calligraphic_Galleon_MET_DP234017.jpg).
-[^lion]: Wikimedia Commons, ["Shiite Calligraphy symbolising Ali as Tiger of God"](https://commons.wikimedia.org/wiki/File:Shiite_Calligraphy_symbolising_Ali_as_Tiger_of_God.png), and [Category: Zoomorphic Arabic calligraphy](https://commons.wikimedia.org/wiki/Category:Zoomorphic_Arabic_calligraphy).
+[^lion]: Vesal Shirazi, *Calligram in the shape of a lion*, Persia, 19th century, via [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Calligram_in_the_shape_of_a_lion.jpg) (from a [Christie's sale record](https://www.christies.com/en/lot/lot-6282135)); and [Category: Zoomorphic Arabic calligraphy](https://commons.wikimedia.org/wiki/Category:Zoomorphic_Arabic_calligraphy).
 [^hilye]: Wikimedia Commons, ["Hilye by Hafiz Osman from Sadberk Hanim Museum"](https://commons.wikimedia.org/wiki/File:Hilye_by_Hafiz_Osman_from_Sadberk_Hanim_Museum.jpg), and [Category: Hafiz Osman](https://commons.wikimedia.org/wiki/Category:Hafiz_Osman).
 [^fivescripts]: Asian Art Museum, San Francisco, ["An Introduction to Chinese Calligraphy"](https://education.asianart.org/resources/an-introduction-to-chinese-calligraphy/); University of Michigan Museum of Art, ["The Lo Chia-Lun Calligraphy Collection"](https://umma.umich.edu/support/donate/donor-stories/the-lo-chia-lun-calligraphy-collection).
 [^stele]: National Palace Museum, Taipei, ["Oversized and calligraphy" exhibition notes](https://theme.npm.edu.tw/exh111/oversizedandcalligraphy111/en/page-1.html), on the Qing stele school. Rubbing: The Metropolitan Museum of Art, 1977.375.7, via [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:%E6%B3%B0%E5%B6%A7%E5%B1%B1%E6%A8%A1%E6%9C%AC%E7%A2%91-Inscriptions_from_the_Stele_of_Mount_Yi_(Modern_Rubbings)_MET_DP-12237-002.jpg).

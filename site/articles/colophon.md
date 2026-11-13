@@ -36,6 +36,14 @@ renderer, written for this project, draws the Library's sketches at about a mill
 each. **[resvg](https://github.com/RazrFalcon/resvg)** turns figures into the PNG cards you
 see when a page is shared.
 
+## The photographs
+
+The calligraphy in [*The written word as image*](../inspirations/) comes from the open-access
+collections of The Metropolitan Museum of Art and other museums, by way of
+[Wikimedia Commons](https://commons.wikimedia.org). Every picture is public domain or CC0. The
+build keeps its own compressed copies, made with [sharp](https://sharp.pixelplumbing.com), and
+each plate links to its Commons page for the full provenance, licence and resolution.
+
 ## The words and type
 
 The essays are Markdown, turned into pages by [marked](https://marked.js.org) and a short build
@@ -66,5 +74,6 @@ and the site.
 ## Licences
 
 The code is MIT-licensed and [on GitHub](https://github.com/coldnebo/sphere-glyphs). Penrose,
-three.js, marked and jsdom are MIT-licensed; resvg-js is MPL-2.0; NumPy and SciPy are
-BSD-licensed; the typefaces are under the SIL Open Font License.
+three.js, marked and jsdom are MIT-licensed; resvg-js is MPL-2.0; sharp is Apache-2.0; NumPy
+and SciPy are BSD-licensed; the typefaces are under the SIL Open Font License. The photographs
+of artworks are public domain or CC0, as recorded for each one in the site's media manifest.

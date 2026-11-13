@@ -211,6 +211,24 @@ export async function wandering() {
   return sheet(steps, { cols: 5, cell: 240, captions: steps.map((_, i) => (i ? `step ${i}` : "A3")) });
 }
 
+/**
+ * The calligraphy article: one loop at five settings of the brush, set loosely after the five
+ * scripts. Seal: even and angular. Clerical and regular: corners tighten, pressure appears.
+ * Running: full momentum. Cursive: heavy, fast, pressed hard into every turn.
+ */
+export const DIAL = [
+  ["seal", { base: 5, momentum: 0.12, pressure: 0 }],
+  ["clerical", { base: 6, momentum: 0.35, pressure: 0.5 }],
+  ["regular", { base: 6.5, momentum: 0.6, pressure: 0.8 }],
+  ["running", { base: 6.5, momentum: 1, pressure: 1 }],
+  ["cursive", { base: 9.5, momentum: 1, pressure: 2.3 }],
+];
+export async function dial() {
+  const g = star(data.loops.A, 3);
+  const svgs = await Promise.all(DIAL.map(([, brush]) => glyph(g, { brush })));
+  return composeSheet(svgs, { cols: 5, cell: 300, background: null, captions: DIAL.map(([name]) => name) });
+}
+
 /** The colophon: one loop (B3), inked three ways. */
 export async function tools() {
   const g = star(data.loops.B, 3);
@@ -288,5 +306,5 @@ export async function libraryDoor() {
 }
 
 export const FIGURES = {
-  cover, dancers, sphere, bracelet, orientations, symmetric, roadtrips, families, wandering, explore, tools,
+  cover, dancers, sphere, bracelet, orientations, symmetric, roadtrips, families, wandering, explore, tools, dial,
 };
