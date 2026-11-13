@@ -9,3 +9,6 @@ pytest "$@"
 
 echo "== node (node --test) =="
 node --test 'tests/**/*.test.mjs'
+
+echo "== site build (figures, citations) =="
+node site/build.mjs >/dev/null && echo "site builds"

@@ -7,7 +7,7 @@ import { compile, optimize, toSVG, showError } from "@penrose/core";
 import {
   loopSubstance, withBrush, withView,
   star, encodeLoop, decodeLoop, canonicalCode, familyNames, randomLoop, mutateLoop,
-} from "./glyph-text.js";
+} from "../lib/glyph-text.js";
 
 const PAPER = 0xf5f0e3;
 const INK = 0x17140f;

@@ -115,3 +115,18 @@ image's `node_modules` mounted at `/node_modules/`. The spike is at
 
 The spike's data comes from `python3 src/site_data.py examples/glyphs/glyphs.json site/spike/data.json`.
 - **Python:** `numpy`, `scipy` and `pytest`, pinned in `requirements.txt`.
+
+## Site build
+
+`node site/build.mjs` (in the container) builds the articles into `_site/`, which git ignores.
+Preview with `scripts/serve.sh` at <http://localhost:8000/_site/loops/>.
+
+- Articles are Markdown in `site/articles/`. Each `## Section` becomes a full-screen spread.
+  `![caption](fig:name)` places a figure from `site/figures.mjs`. A paragraph starting with
+  `**Look further:**` becomes a breakout panel. `text[^key]` cites a `[^key]: …` entry under
+  `## Sources`; sources are numbered by first use, and any that aren't cited are listed as further
+  reading.
+- Figures are rendered at build time. Penrose glyphs become image files; the hand-drawn circle
+  diagrams are inlined so their strokes can animate.
+- The page template, styles and scroll script are in `site/article/`.
+- `scripts/run-tests.sh` runs the build, so a missing figure or an undefined citation fails the tests.

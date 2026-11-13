@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{title}}</title>
+  <meta name="description" content="{{summary}}">
+  <script>document.documentElement.classList.add("js")</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap">
+  <link rel="stylesheet" href="article.css">
+</head>
+<body>
+  <div class="progress" aria-hidden="true"><span></span></div>
+  <nav class="chapters" aria-label="Sections">{{nav}}</nav>
+
+  <header class="cover">
+    <div class="cover-words">
+      <p class="kicker">Sphere glyphs</p>
+      <h1>{{coverTitle}}</h1>
+      <div class="lede">{{coverText}}</div>
+      <a class="scroll-cue" href="#main">Begin</a>
+    </div>
+    <div class="cover-art">{{coverFigure}}</div>
+  </header>
+
+  <main id="main">
+{{spreads}}
+  </main>
+
+{{sources}}
+
+  <footer>
+    <p><a href="{{explorer}}">Open the explorer</a> · <a href="https://github.com/coldnebo/sphere-glyphs">Source on GitHub</a></p>
+  </footer>
+
+  <script type="module" src="article.js"></script>
+</body>
+</html>

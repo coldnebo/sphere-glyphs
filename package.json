@@ -15,6 +15,7 @@
     "@penrose/core": "3.3.1",
     "@resvg/resvg-js": "2.6.2",
     "jsdom": "^25.0.1",
+    "marked": "15.0.7",
     "three": "0.170.0"
   }
 }

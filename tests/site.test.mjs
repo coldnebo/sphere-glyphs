@@ -9,7 +9,7 @@ import { renderSVG } from "../src/penrose.mjs";
 import {
   literals, loopSubstance, withBrush, withView,
   star, normalizeLoop, encodeLoop, decodeLoop, canonicalCode, familyNames, randomLoop, mutateLoop,
-} from "../site/spike/glyph-text.js";
+} from "../site/lib/glyph-text.js";
 
 const data = JSON.parse(readFileSync("site/spike/data.json", "utf8"));
 const glass = readFileSync("penrose/styles/glass.style", "utf8");
