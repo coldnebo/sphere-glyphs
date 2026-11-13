@@ -87,6 +87,7 @@ scripts/run-tests.sh
 | `tests/test_glyphs.py`  | The orientation frame. 3,120 paths, 8 symmetries, 199 glyphs. Every step is a contact edge. Regenerating `examples/glyphs` gives byte-identical files. |
 | `tests/test_stars.py`   | The star cycles are permutations. k and 13−k are reverses. Regenerating `examples/stars` gives byte-identical files. |
 | `tests/test_loops.py`   | There are 3 closed surface loops, all closing along contact edges. They generate 18 distinct loop glyphs. k and 13−k give the same loop. Regenerating `examples/loops` gives byte-identical files. |
+| `tests/test_burnside.py` | The invariant-loop search matches brute force on small cases. The exact count for the 13 points is consistent with 12!/2 and the symmetric loops. |
 | `tests/test_spells.py`  | The 11-point sphere is the Tammes optimum (63.4349°, 25 contacts, matching the solver). The hub sits at the pole. Arcs, including antipodal ones, are correct. Every spell has the shared base. Every Substance statement has distinct numbers. Regenerating `examples/spells` gives byte-identical files. |
 | `tests/render.test.mjs` | Every style compiles, optimizes and renders through Penrose. PNG rasterization works. |
 

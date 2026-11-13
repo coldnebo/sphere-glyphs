@@ -73,8 +73,12 @@ The model is a stack of layers. Each layer is a dial between formal and expressi
   then ring by ring by azimuth, and visited in the order i → k·i mod 13. On a circle this
   rule gives {13/k} from the roots of unity, so the project returns to its starting
   question in 3D. Each k from 1 to 6 gives one closed loop; k and 13−k give the same loop
-  reversed. Open chord paths number 13!/(8·2) ≈ 3.9 × 10⁸ up to symmetry; closed loops
-  number 12!/(2·8) ≈ 3.0 × 10⁷.
+  reversed. Open chord paths number about 13!/(8·2) ≈ 3.9 × 10⁸ up to symmetry. Closed
+  loops number exactly **29,940,480** (`burnside.py`). There are 12!/2 = 239,500,800 loops,
+  and Burnside's lemma averages the loops each symmetry fixes. Only the half-turn about the
+  axis fixes any: 23,040 loops. A 13-point loop flipped onto itself must keep exactly one point
+  in place, and only the half-turn does that. So **5,760 glyphs are symmetric**, none of them
+  among the 18 families, and every other glyph has 8 distinct orientations.
 - **Loops from surface loops** (`loops.py`): the contact graph has only **3 closed
   Hamiltonian loops** up to symmetry. Each one is itself an ordering of the 13 points, so it
   can stand in for the roots of unity: stepping by k = 1…6 gives a 3 × 6 table of

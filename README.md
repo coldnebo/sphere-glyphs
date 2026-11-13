@@ -47,6 +47,7 @@ src/              pipeline
   glyphs.py         orient the sphere, enumerate Hamiltonian paths, dedupe by symmetry -> Substances
   stars.py          spherical star loops i -> k*i mod 13 -> Substances
   loops.py          the 3 closed surface loops x star steps k = 1..6 -> 18 loop glyphs
+  burnside.py       exact count of distinct loop glyphs: 29,940,480
   spells.py         spell-book circles -> the 11-point sphere (icosahedron minus one) -> Substances
   render.mjs        render one Domain/Substance/Style trio to SVG or PNG
   sheet.mjs         tile many renders into a contact sheet
