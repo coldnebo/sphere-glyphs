@@ -49,6 +49,7 @@ const ARTICLES = [
   { src: "site/articles/permutations.md", slug: "loops" },
   { src: "site/articles/colophon.md", slug: "colophon" },
   { src: "site/articles/inspirations.md", slug: "inspirations" },
+  { src: "site/articles/unseen.md", slug: "unseen" },
 ];
 
 /** "Built on <date> from commit <sha>", for the colophon. */
@@ -114,10 +115,19 @@ async function figure(name, caption, dir) {
   if (!fn) throw new Error(`unknown figure fig:${name}`);
   if (!figureCache.has(name)) {
     const t0 = Date.now();
-    figureCache.set(name, await fn());
-    console.log(`  figure ${name}  ${Math.round(figureCache.get(name).length / 1024)} KB  ${Date.now() - t0} ms`);
+    const result = await fn();
+    figureCache.set(name, result);
+    const bytes = typeof result === "string" ? result.length : result.data.length;
+    console.log(`  figure ${name}  ${Math.round(bytes / 1024)} KB  ${Date.now() - t0} ms`);
   }
   const svg = figureCache.get(name);
+  // computed raster figures (science.mjs) are WebP images
+  if (typeof svg !== "string") {
+    writeFileSync(join(dir, "figures", `${name}.webp`), svg.data);
+    return `<figure class="plate fig-${name}"><img class="art" src="figures/${name}.webp" width="${svg.width}" ` +
+      `height="${svg.height}" alt="${esc(caption)}" loading="lazy" decoding="async">` +
+      `<figcaption>${inline(caption)}</figcaption></figure>`;
+  }
   // hand-drawn SVGs go inline (their strokes animate); Penrose renders load as images
   const animated = svg.includes('class="draw"');
   let media;

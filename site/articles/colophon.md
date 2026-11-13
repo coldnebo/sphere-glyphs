@@ -36,6 +36,12 @@ renderer, written for this project, draws the Library's sketches at about a mill
 each. **[resvg](https://github.com/RazrFalcon/resvg)** turns figures into the PNG cards you
 see when a page is shared.
 
+The pictures in [*Shapes we cannot see*](../unseen/) are computed too. Hydrogen orbitals are
+sampled point by point from the exact solutions of the Schrödinger equation; spherical
+harmonics are evaluated on the sphere; the Calabi–Yau surfaces follow Andrew Hanson's 1994
+construction. A small renderer written for this project shades and stipples them, and
+[sharp](https://sharp.pixelplumbing.com) saves them as images.
+
 ## The photographs
 
 The calligraphy in [*The written word as image*](../inspirations/) comes from the open-access

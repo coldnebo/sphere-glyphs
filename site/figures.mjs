@@ -7,6 +7,8 @@ import {
   loopSubstance, withView, withBrush, star, decodeLoop, mutateLoop,
 } from "./lib/glyph-text.js";
 import { Library } from "./lib/library.js";
+import sharp from "sharp";
+import { calabiYau, calabiYauFamily, harmonics, orbitals } from "./science.mjs";
 
 const DOMAIN = readFileSync("penrose/tammes-glyph.domain", "utf8");
 const GLASS = readFileSync("penrose/styles/glass.style", "utf8");
@@ -305,6 +307,38 @@ export async function libraryDoor() {
   return sheet([0, 1, 2, 3].map((n) => lib.glyph(n).loop), { cols: 2, cell: 300 });
 }
 
+/** "Shapes we cannot see": one loop (C4) from three directions, three shadows of one object. */
+export async function shadows() {
+  const g = star(data.loops.C, 4);
+  // column-major world-to-view: tilt about x, then turn about the view's y axis
+  const viewMatrix = (tilt, turn) => {
+    const ct = Math.cos(tilt), st = Math.sin(tilt), cu = Math.cos(turn), su = Math.sin(turn);
+    const r = [[cu, su * st, su * ct], [0, ct, -st], [-su, cu * st, cu * ct]];
+    return [r[0][0], r[1][0], r[2][0], 0, r[0][1], r[1][1], r[2][1], 0, r[0][2], r[1][2], r[2][2], 0, 0, 0, 0, 1];
+  };
+  const views = [["from the top point", viewMatrix(0, 0)], ["tilted", viewMatrix(0.52, 0)], ["from the side", viewMatrix(1.35, 0.7)]];
+  const svgs = await Promise.all(views.map(([, view]) => glyph(g, { view })));
+  return composeSheet(svgs, { cols: 3, cell: 340, background: null, captions: views.map(([name]) => name) });
+}
+
+/** A raster figure as an SVG, so link-preview cards can place it like a glyph. */
+async function rasterAsSVG({ data: webp, width, height }) {
+  const png = await sharp(webp).png().toBuffer();
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">` +
+    `<image href="data:image/png;base64,${png.toString("base64")}" width="${width}" height="${height}"/></svg>`;
+}
+
+CARDS.unseen = () => card(
+  calabiYau({ size: 1000 }).then(rasterAsSVG),
+  glyph(star(data.loops.C, 4)),
+  glyph(star(data.loops.B, 3), { brush: { base: 6, momentum: 0.6, pressure: 1 } }),
+);
+
 export const FIGURES = {
   cover, dancers, sphere, bracelet, orientations, symmetric, roadtrips, families, wandering, explore, tools, dial,
+  shadows,
+  orbitals: () => orbitals(),
+  harmonics: () => harmonics(data.points),
+  calabiyau: () => calabiYau(),
+  cyfamily: () => calabiYauFamily(),
 };
